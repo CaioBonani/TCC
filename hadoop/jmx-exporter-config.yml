@@ -1,0 +1,37 @@
+# =============================================================
+# JMX Prometheus Exporter - Hadoop HDFS Configuration
+# Lambda Architecture - TCC DATASUS
+# =============================================================
+
+startDelaySeconds: 0
+lowercaseOutputName: true
+lowercaseOutputLabelNames: true
+
+rules:
+  # ─── NameNode Metrics ───
+  - pattern: "Hadoop<service=NameNode, name=FSNamesystemState><>(CapacityTotal|CapacityUsed|CapacityRemaining|NumLiveDataNodes|NumDeadDataNodes|NumDecomLiveDataNodes|NumStaleDataNodes|FilesTotal|BlocksTotal|PendingReplicationBlocks|UnderReplicatedBlocks|CorruptBlocks|MissingBlocks|TotalLoad)"
+    name: hdfs_namenode_$1
+    type: GAUGE
+
+  - pattern: "Hadoop<service=NameNode, name=FSNamesystem><>(.*)"
+    name: hdfs_namenode_fs_$1
+    type: GAUGE
+
+  # ─── DataNode Metrics ───
+  - pattern: "Hadoop<service=DataNode, name=FSDatasetState.*><>(Capacity|DfsUsed|Remaining|NumBlocksCached|NumBlocksFailedToCache|NumBlocksFailedToUnCache)"
+    name: hdfs_datanode_$1
+    type: GAUGE
+
+  - pattern: "Hadoop<service=DataNode, name=DataNodeActivity.*><>(BytesWritten|BytesRead|BlocksWritten|BlocksRead|BlocksReplicated|BlocksRemoved|BlocksVerified|BlockChecksum.*|ReadBlockOp.*|WriteBlockOp.*|ReplaceBlockOp.*|HeartbeatsNumOps|HeartbeatsAvgTime)"
+    name: hdfs_datanode_activity_$1
+    type: GAUGE
+
+  # ─── JVM Metrics ───
+  - pattern: "Hadoop<service=.+, name=JvmMetrics><>(MemHeapUsedM|MemHeapCommittedM|MemHeapMaxM|MemNonHeapUsedM|MemNonHeapCommittedM|GcCount|GcTimeMillis|ThreadsRunnable|ThreadsBlocked|ThreadsWaiting)"
+    name: hdfs_jvm_$1
+    type: GAUGE
+
+  # ─── RPC Metrics ───
+  - pattern: "Hadoop<service=.+, name=RpcActivityForPort\\d+><>(ReceivedBytes|SentBytes|RpcQueueTimeNumOps|RpcQueueTimeAvgTime|RpcProcessingTimeNumOps|RpcProcessingTimeAvgTime|NumOpenConnections|CallQueueLength)"
+    name: hdfs_rpc_$1
+    type: GAUGE

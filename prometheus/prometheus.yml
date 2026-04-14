@@ -1,0 +1,69 @@
+# =============================================================
+# Prometheus Configuration
+# Lambda Architecture - TCC DATASUS
+# =============================================================
+
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  scrape_timeout: 10s
+
+# ─── Scrape Targets ───
+scrape_configs:
+
+  # ─── Prometheus Self-Monitoring ───
+  - job_name: "prometheus"
+    static_configs:
+      - targets: ["localhost:9090"]
+        labels:
+          service: "prometheus"
+
+  # ─── Kafka JMX Exporter ───
+  - job_name: "kafka"
+    static_configs:
+      - targets: ["kafka:9101"]
+        labels:
+          service: "kafka"
+          layer: "ingestion"
+    scrape_interval: 10s
+
+  # ─── Spark Master Metrics ───
+  - job_name: "spark-master"
+    metrics_path: "/metrics/master/prometheus"
+    static_configs:
+      - targets: ["spark-master:8080"]
+        labels:
+          service: "spark-master"
+          layer: "processing"
+    scrape_interval: 10s
+
+  # ─── Spark Applications Metrics ───
+  # NOTA: Este target só fica UP quando um Spark job está em execução.
+  #       É normal estar DOWN quando não há nenhum job ativo.
+  - job_name: "spark-applications"
+    metrics_path: "/metrics/prometheus"
+    static_configs:
+      - targets: ["spark-master:4040"]
+        labels:
+          service: "spark-app"
+          layer: "processing"
+    scrape_interval: 10s
+
+  # ─── HDFS NameNode Metrics (via JMX Prometheus Exporter) ───
+  - job_name: "hdfs-namenode"
+    static_configs:
+      - targets: ["namenode:9871"]
+        labels:
+          service: "hdfs-namenode"
+          layer: "storage"
+    scrape_interval: 30s
+
+  # ─── HDFS DataNode Metrics (via JMX Prometheus Exporter) ───
+  - job_name: "hdfs-datanode"
+    static_configs:
+      - targets: ["datanode:9865"]
+        labels:
+          service: "hdfs-datanode"
+          layer: "storage"
+    scrape_interval: 30s
+

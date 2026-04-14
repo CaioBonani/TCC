@@ -1,0 +1,391 @@
+{
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": { "type": "grafana", "uid": "-- Grafana --" },
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 1,
+  "id": null,
+  "links": [],
+  "liveNow": false,
+  "panels": [
+    {
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 0 },
+      "id": 100,
+      "title": "🔴 KAFKA - Camada de Ingestão",
+      "type": "row"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "custom": {
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "mensagens/s",
+            "drawStyle": "line",
+            "fillOpacity": 20,
+            "gradientMode": "scheme",
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "pointSize": 5,
+            "showPoints": "auto",
+            "spanNulls": false
+          },
+          "unit": "ops"
+        }
+      },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 1 },
+      "id": 1,
+      "options": { "legend": { "displayMode": "table", "placement": "bottom" } },
+      "title": "Kafka - Mensagens por Segundo (Throughput)",
+      "type": "timeseries",
+      "targets": [
+        {
+          "expr": "rate(kafka_server_broker_topic_metrics_messagesinpersec{topic=\"datasus-internacoes\"}[1m])",
+          "legendFormat": "{{topic}} - Messages In/s",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 15,
+            "gradientMode": "scheme",
+            "lineInterpolation": "smooth",
+            "lineWidth": 2
+          },
+          "unit": "Bps"
+        }
+      },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 1 },
+      "id": 2,
+      "title": "Kafka - Bytes In/Out por Segundo",
+      "type": "timeseries",
+      "targets": [
+        {
+          "expr": "rate(kafka_server_broker_topic_metrics_bytesinpersec[1m])",
+          "legendFormat": "Bytes In/s",
+          "refId": "A"
+        },
+        {
+          "expr": "rate(kafka_server_broker_topic_metrics_bytesoutpersec[1m])",
+          "legendFormat": "Bytes Out/s",
+          "refId": "B"
+        }
+      ]
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "thresholds": {
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 100 },
+              { "color": "red", "value": 1000 }
+            ]
+          }
+        }
+      },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 9 },
+      "id": 3,
+      "title": "Kafka - Consumer Lag por Partição",
+      "type": "timeseries",
+      "targets": [
+        {
+          "expr": "kafka_server_consumer_lag",
+          "legendFormat": "{{topic}} - P{{partition}}",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "thresholds": {
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "red", "value": 1 }
+            ]
+          },
+          "mappings": [
+            { "options": { "0": { "text": "OK" } }, "type": "value" },
+            { "options": { "from": 1, "to": 999, "result": { "text": "ALERTA" } }, "type": "range" }
+          ]
+        }
+      },
+      "gridPos": { "h": 4, "w": 6, "x": 12, "y": 9 },
+      "id": 4,
+      "title": "Partições Under-Replicated",
+      "type": "stat",
+      "targets": [
+        {
+          "expr": "kafka_server_replica_manager_underreplicatedpartitions",
+          "legendFormat": "Under-replicated",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "fieldConfig": {
+        "defaults": { "unit": "short" }
+      },
+      "gridPos": { "h": 4, "w": 6, "x": 18, "y": 9 },
+      "id": 5,
+      "title": "Total de Partições",
+      "type": "stat",
+      "targets": [
+        {
+          "expr": "kafka_server_replica_manager_partitioncount",
+          "legendFormat": "Partitions",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 17 },
+      "id": 200,
+      "title": "⚡ SPARK - Processamento (Batch + Speed Layer)",
+      "type": "row"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 20,
+            "gradientMode": "scheme",
+            "lineInterpolation": "smooth",
+            "lineWidth": 2
+          },
+          "unit": "short"
+        }
+      },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 18 },
+      "id": 6,
+      "title": "Spark - Workers Ativos",
+      "type": "timeseries",
+      "targets": [
+        {
+          "expr": "metrics_master_aliveWorkers_Value",
+          "legendFormat": "Alive Workers",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 20,
+            "gradientMode": "scheme",
+            "lineInterpolation": "smooth",
+            "lineWidth": 2
+          },
+          "unit": "short"
+        }
+      },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 18 },
+      "id": 7,
+      "title": "Spark - Aplicações Ativas",
+      "type": "timeseries",
+      "targets": [
+        {
+          "expr": "metrics_master_apps_Number",
+          "legendFormat": "Running Apps",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "decbytes"
+        }
+      },
+      "gridPos": { "h": 4, "w": 6, "x": 0, "y": 26 },
+      "id": 8,
+      "title": "Spark - Memória Usada",
+      "type": "stat",
+      "targets": [
+        {
+          "expr": "metrics_master_usedMem_Value * 1024 * 1024",
+          "legendFormat": "Used Memory",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "decbytes"
+        }
+      },
+      "gridPos": { "h": 4, "w": 6, "x": 6, "y": 26 },
+      "id": 9,
+      "title": "Spark - Memória Total",
+      "type": "stat",
+      "targets": [
+        {
+          "expr": "metrics_master_totalMem_Value * 1024 * 1024",
+          "legendFormat": "Total Memory",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 30 },
+      "id": 300,
+      "title": "💾 HDFS - Armazenamento (Master Dataset)",
+      "type": "row"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "description": "Métricas HDFS coletadas via JMX do NameNode",
+      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 31 },
+      "id": 10,
+      "title": "HDFS - Status do Cluster (via NameNode JMX)",
+      "type": "table",
+      "targets": [
+        {
+          "expr": "up{job=\"hdfs-namenode\"}",
+          "legendFormat": "NameNode Status",
+          "refId": "A",
+          "format": "table",
+          "instant": true
+        },
+        {
+          "expr": "up{job=\"hdfs-datanode\"}",
+          "legendFormat": "DataNode Status",
+          "refId": "B",
+          "format": "table",
+          "instant": true
+        }
+      ]
+    },
+    {
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 39 },
+      "id": 400,
+      "title": "🗄️ KAFKA - JVM Health",
+      "type": "row"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 30,
+            "gradientMode": "scheme",
+            "lineInterpolation": "smooth",
+            "lineWidth": 2
+          },
+          "unit": "decbytes"
+        }
+      },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 40 },
+      "id": 11,
+      "title": "Kafka JVM - Heap Memory Usage",
+      "type": "timeseries",
+      "targets": [
+        {
+          "expr": "kafka_jvm_heap_memory_used_bytes",
+          "legendFormat": "Used",
+          "refId": "A"
+        },
+        {
+          "expr": "kafka_jvm_heap_memory_max_bytes",
+          "legendFormat": "Max",
+          "refId": "B"
+        },
+        {
+          "expr": "kafka_jvm_heap_memory_committed_bytes",
+          "legendFormat": "Committed",
+          "refId": "C"
+        }
+      ]
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 15,
+            "lineInterpolation": "smooth",
+            "lineWidth": 2
+          },
+          "unit": "short"
+        }
+      },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 40 },
+      "id": 12,
+      "title": "Kafka JVM - Garbage Collection",
+      "type": "timeseries",
+      "targets": [
+        {
+          "expr": "rate(kafka_jvm_gc_collectioncount[5m])",
+          "legendFormat": "{{gc}} - Collections/s",
+          "refId": "A"
+        }
+      ]
+    }
+  ],
+  "refresh": "10s",
+  "schemaVersion": 38,
+  "style": "dark",
+  "tags": ["lambda-architecture", "tcc", "datasus", "kafka", "spark", "hdfs"],
+  "templating": {
+    "list": [
+      {
+        "current": { "selected": false, "text": "Prometheus", "value": "Prometheus" },
+        "hide": 0,
+        "includeAll": false,
+        "label": "Datasource",
+        "multi": false,
+        "name": "DS_PROMETHEUS",
+        "options": [],
+        "query": "prometheus",
+        "refresh": 1,
+        "regex": "",
+        "type": "datasource"
+      }
+    ]
+  },
+  "time": { "from": "now-1h", "to": "now" },
+  "timepicker": {},
+  "timezone": "browser",
+  "title": "Lambda Architecture - DATASUS",
+  "uid": "lambda-arch-dashboard",
+  "version": 1
+}

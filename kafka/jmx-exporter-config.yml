@@ -1,0 +1,70 @@
+# =============================================================
+# Kafka JMX Exporter Configuration
+# Métricas expostas para Prometheus
+# =============================================================
+
+lowercaseOutputName: true
+lowercaseOutputLabelNames: true
+
+rules:
+  # ─── Métricas do Broker ───
+  - pattern: "kafka.server<type=BrokerTopicMetrics, name=(MessagesInPerSec|BytesInPerSec|BytesOutPerSec|TotalProduceRequestsPerSec|TotalFetchRequestsPerSec), topic=(.+)><>(Count|OneMinuteRate|FiveMinuteRate)"
+    name: "kafka_server_broker_topic_metrics_$1"
+    labels:
+      topic: "$2"
+    type: GAUGE
+
+  # ─── Consumer Lag (por partição) ───
+  - pattern: "kafka.server<type=FetcherLagMetrics, name=ConsumerLag, clientId=(.+), topic=(.+), partition=(.+)><>Value"
+    name: "kafka_server_consumer_lag"
+    labels:
+      client_id: "$1"
+      topic: "$2"
+      partition: "$3"
+    type: GAUGE
+
+  # ─── Partições ───
+  - pattern: "kafka.server<type=ReplicaManager, name=(PartitionCount|UnderReplicatedPartitions|OfflineReplicaCount)><>Value"
+    name: "kafka_server_replica_manager_$1"
+    type: GAUGE
+
+  # ─── Log (Retenção e Segmentos) ───
+  - pattern: "kafka.log<type=LogFlushStats, name=LogFlushRateAndTimeMs><>(Count|Mean|95thPercentile)"
+    name: "kafka_log_flush_$1"
+    type: GAUGE
+
+  - pattern: "kafka.log<type=Log, name=Size, topic=(.+), partition=(.+)><>Value"
+    name: "kafka_log_size_bytes"
+    labels:
+      topic: "$1"
+      partition: "$2"
+    type: GAUGE
+
+  # ─── Controller ───
+  - pattern: "kafka.controller<type=KafkaController, name=(ActiveControllerCount|OfflinePartitionsCount)><>Value"
+    name: "kafka_controller_$1"
+    type: GAUGE
+
+  # ─── Network / Request Metrics ───
+  - pattern: "kafka.network<type=RequestMetrics, name=RequestsPerSec, request=(Produce|FetchConsumer|FetchFollower)><>(Count|OneMinuteRate)"
+    name: "kafka_network_requests_per_sec"
+    labels:
+      request: "$1"
+    type: GAUGE
+
+  - pattern: "kafka.network<type=RequestMetrics, name=TotalTimeMs, request=(Produce|FetchConsumer|FetchFollower)><>(Mean|95thPercentile|99thPercentile)"
+    name: "kafka_network_total_time_ms"
+    labels:
+      request: "$1"
+    type: GAUGE
+
+  # ─── JVM Metrics ───
+  - pattern: "java.lang<type=Memory><HeapMemoryUsage><(used|max|committed)>"
+    name: "kafka_jvm_heap_memory_$1_bytes"
+    type: GAUGE
+
+  - pattern: "java.lang<type=GarbageCollector, name=(.+)><>(CollectionCount|CollectionTime)"
+    name: "kafka_jvm_gc_$2"
+    labels:
+      gc: "$1"
+    type: GAUGE

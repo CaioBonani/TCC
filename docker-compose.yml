@@ -1,0 +1,375 @@
+# =============================================================
+# TCC - Arquitetura Lambda (DATASUS)
+# Docker Compose - Orquestração Completa
+# =============================================================
+# Serviços: Zookeeper, Kafka, HDFS (NameNode + DataNode),
+#           Spark (Master + Worker), Cassandra,
+#           Prometheus, Grafana
+# =============================================================
+
+services:
+
+  # ─────────────────────────────────────────────────────────────
+  # ZOOKEEPER - Coordenação do Kafka
+  # ─────────────────────────────────────────────────────────────
+
+
+  # ─────────────────────────────────────────────────────────────
+  # KAFKA - Camada de Ingestão / Desacoplador
+  # ─────────────────────────────────────────────────────────────
+  kafka:
+    image: confluentinc/cp-kafka:7.5.0
+    container_name: kafka
+    hostname: kafka
+    ports:
+      - "9092:9092"     # Acesso externo (VPN)
+      - "9093:9093"     # Acesso interno (inter-broker)
+      - "9101:9101"     # JMX Exporter
+    environment:
+      # KRaft Configuration
+      KAFKA_BROKER_ID: 1
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: "broker,controller"
+      CLUSTER_ID: "MkU3OEVBNTcwNTJENDM2Qk"
+      KAFKA_CONTROLLER_QUORUM_VOTERS: "1@kafka:29093"
+      KAFKA_CONTROLLER_LISTENER_NAMES: "CONTROLLER"
+      # Listeners
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: "INTERNAL:PLAINTEXT,EXTERNAL:PLAINTEXT,CONTROLLER:PLAINTEXT"
+      KAFKA_ADVERTISED_LISTENERS: "INTERNAL://kafka:9093,EXTERNAL://kafka:9092"
+      KAFKA_INTER_BROKER_LISTENER_NAME: "INTERNAL"
+      KAFKA_LISTENERS: "INTERNAL://0.0.0.0:9093,EXTERNAL://0.0.0.0:9092,CONTROLLER://0.0.0.0:29093"
+      # Configurações de tópico
+      KAFKA_NUM_PARTITIONS: ${KAFKA_PARTITIONS:-3}
+      KAFKA_DEFAULT_REPLICATION_FACTOR: ${KAFKA_REPLICATION_FACTOR:-1}
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      # Retenção longa para permitir reprocessamento histórico (Batch Layer)
+      KAFKA_LOG_RETENTION_HOURS: 168  # 7 dias
+      KAFKA_LOG_RETENTION_BYTES: -1   # sem limite por tamanho
+      KAFKA_LOG_SEGMENT_BYTES: 1073741824  # 1GB
+      # Performance
+      KAFKA_MESSAGE_MAX_BYTES: 10485760
+      KAFKA_REPLICA_FETCH_MAX_BYTES: 10485760
+      # JMX
+      KAFKA_JMX_PORT: 9999
+      KAFKA_JMX_HOSTNAME: kafka
+      # JMX Prometheus Exporter
+      KAFKA_OPTS: "-javaagent:/opt/jmx-exporter/jmx_prometheus_javaagent.jar=9101:/opt/jmx-exporter/kafka-jmx-config.yml"
+      # Auto-criação do tópico principal
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+    volumes:
+      - kafka-data:/var/lib/kafka/data
+      - ./kafka/jmx-exporter-config.yml:/opt/jmx-exporter/kafka-jmx-config.yml:ro
+      - ./kafka/jmx_prometheus_javaagent.jar:/opt/jmx-exporter/jmx_prometheus_javaagent.jar:ro
+    networks:
+      - lambda-network
+    healthcheck:
+      test: ["CMD-SHELL", "unset KAFKA_OPTS && kafka-topics --bootstrap-server localhost:9093 --list 2>/dev/null || exit 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 10
+      start_period: 30s
+    restart: unless-stopped
+
+  # Criação automática do tópico DATASUS ao iniciar
+  kafka-init:
+    image: confluentinc/cp-kafka:7.5.0
+    container_name: kafka-init
+    depends_on:
+      kafka:
+        condition: service_healthy
+    networks:
+      - lambda-network
+    entrypoint: ["/bin/bash", "-c"]
+    command:
+      - |
+        echo '>>> Criando tópico datasus-internacoes...'
+        kafka-topics --create --if-not-exists --bootstrap-server kafka:9093 --topic datasus-internacoes --partitions $${KAFKA_PARTITIONS:-3} --replication-factor $${KAFKA_REPLICATION_FACTOR:-1} --config retention.ms=604800000 --config cleanup.policy=delete
+        echo '>>> Criando tópico datasus-internacoes-dlq (Dead Letter Queue)...'
+        kafka-topics --create --if-not-exists --bootstrap-server kafka:9093 --topic datasus-internacoes-dlq --partitions 1 --replication-factor $${KAFKA_REPLICATION_FACTOR:-1}
+        echo '>>> Tópicos criados com sucesso:'
+        kafka-topics --list --bootstrap-server kafka:9093
+        echo '>>> Kafka init finalizado.'
+    restart: "no"
+
+  # ─────────────────────────────────────────────────────────────
+  # HDFS NAMENODE - Master Dataset (Imutabilidade)
+  # ─────────────────────────────────────────────────────────────
+  namenode:
+    image: bde2020/hadoop-namenode:2.0.0-hadoop3.2.1-java8
+    container_name: namenode
+    hostname: namenode
+    ports:
+      - "9870:9870"   # Web UI
+      - "9000:9000"   # HDFS RPC
+      - "9871:9871"   # JMX Prometheus Exporter
+    environment:
+      CLUSTER_NAME: lambda-hadoop
+      CORE_CONF_fs_defaultFS: hdfs://namenode:9000
+      CORE_CONF_hadoop_http_staticuser_user: root
+      HDFS_CONF_dfs_replication: ${HDFS_REPLICATION:-1}
+      HDFS_CONF_dfs_blocksize: ${HDFS_BLOCKSIZE:-134217728}
+      HDFS_CONF_dfs_permissions_enabled: "false"
+      HDFS_CONF_dfs_namenode_datanode_registration_ip___hostname___check: "false"
+      HDFS_CONF_dfs_webhdfs_enabled: "true"
+      # Diretórios do Master Dataset
+      HDFS_CONF_dfs_namenode_name_dir: file:///hadoop/dfs/name
+      # JMX Prometheus Exporter
+      HADOOP_OPTS: "-javaagent:/opt/jmx-exporter/jmx_prometheus_javaagent.jar=9871:/opt/jmx-exporter/hadoop-jmx-config.yml"
+    volumes:
+      - namenode-data:/hadoop/dfs/name
+      - ./hadoop/jmx_prometheus_javaagent.jar:/opt/jmx-exporter/jmx_prometheus_javaagent.jar:ro
+      - ./hadoop/jmx-exporter-config.yml:/opt/jmx-exporter/hadoop-jmx-config.yml:ro
+    networks:
+      - lambda-network
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:9870/ || exit 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    restart: unless-stopped
+
+  # ─────────────────────────────────────────────────────────────
+  # HDFS DATANODE - Armazenamento Distribuído
+  # ─────────────────────────────────────────────────────────────
+  datanode:
+    image: bde2020/hadoop-datanode:2.0.0-hadoop3.2.1-java8
+    container_name: datanode
+    hostname: datanode
+    ports:
+      - "9864:9864"   # Web UI
+      - "9865:9865"   # JMX Prometheus Exporter
+    environment:
+      CORE_CONF_fs_defaultFS: hdfs://namenode:9000
+      HDFS_CONF_dfs_replication: ${HDFS_REPLICATION:-1}
+      HDFS_CONF_dfs_blocksize: ${HDFS_BLOCKSIZE:-134217728}
+      HDFS_CONF_dfs_permissions_enabled: "false"
+      HDFS_CONF_dfs_datanode_data_dir: file:///hadoop/dfs/data
+      SERVICE_PRECONDITION: "namenode:9870"
+      # JMX Prometheus Exporter
+      HADOOP_OPTS: "-javaagent:/opt/jmx-exporter/jmx_prometheus_javaagent.jar=9865:/opt/jmx-exporter/hadoop-jmx-config.yml"
+    volumes:
+      - datanode-data:/hadoop/dfs/data
+      - ./hadoop/jmx_prometheus_javaagent.jar:/opt/jmx-exporter/jmx_prometheus_javaagent.jar:ro
+      - ./hadoop/jmx-exporter-config.yml:/opt/jmx-exporter/hadoop-jmx-config.yml:ro
+    networks:
+      - lambda-network
+    depends_on:
+      namenode:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:9864/ || exit 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    restart: unless-stopped
+
+  # ─────────────────────────────────────────────────────────────
+  # SPARK MASTER - Coordenação do Processamento
+  # ─────────────────────────────────────────────────────────────
+  spark-master:
+    image: apache/spark-py:latest
+    container_name: spark-master
+    hostname: spark-master
+    ports:
+      - "8080:8080"   # Web UI
+      - "7077:7077"   # Cluster Manager
+      - "4040:4040"   # Spark Application UI
+    environment:
+      SPARK_MASTER_HOST: spark-master
+      SPARK_MASTER_PORT: 7077
+      SPARK_MASTER_WEBUI_PORT: 8080
+      SPARK_NO_DAEMONIZE: "true"
+    command: /opt/spark/bin/spark-class org.apache.spark.deploy.master.Master
+    user: root
+    volumes:
+      - ./spark/spark-defaults.conf:/opt/spark/conf/spark-defaults.conf:ro
+      - ./app:/opt/spark-apps:ro
+      - spark-logs:/opt/spark/logs
+    networks:
+      - lambda-network
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8080/ || exit 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+      start_period: 20s
+    restart: unless-stopped
+
+  # ─────────────────────────────────────────────────────────────
+  # SPARK WORKER - Execução de Tarefas
+  # ─────────────────────────────────────────────────────────────
+  spark-worker:
+    image: apache/spark-py:latest
+    container_name: spark-worker
+    hostname: spark-worker
+    ports:
+      - "8081:8081"   # Web UI
+    environment:
+      SPARK_WORKER_MEMORY: ${SPARK_WORKER_MEMORY:-3g}
+      SPARK_WORKER_CORES: ${SPARK_WORKER_CORES:-4}
+      SPARK_WORKER_WEBUI_PORT: 8081
+      SPARK_NO_DAEMONIZE: "true"
+    command: /opt/spark/bin/spark-class org.apache.spark.deploy.worker.Worker spark://spark-master:7077
+    user: root
+    volumes:
+      - ./spark/spark-defaults.conf:/opt/spark/conf/spark-defaults.conf:ro
+      - ./app:/opt/spark-apps:ro
+    networks:
+      - lambda-network
+    depends_on:
+      spark-master:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # ─────────────────────────────────────────────────────────────
+  # CASSANDRA - Serving Layer (Batch Views + Speed Views)
+  # ─────────────────────────────────────────────────────────────
+  cassandra:
+    image: cassandra:4.1
+    container_name: cassandra
+    hostname: cassandra
+    ports:
+      - "9042:9042"   # CQL
+      - "7199:7199"   # JMX
+    environment:
+      CASSANDRA_CLUSTER_NAME: ${CASSANDRA_CLUSTER_NAME:-LambdaCluster}
+      CASSANDRA_DC: ${CASSANDRA_DC:-datacenter1}
+      CASSANDRA_RACK: rack1
+      CASSANDRA_ENDPOINT_SNITCH: GossipingPropertyFileSnitch
+      CASSANDRA_NUM_TOKENS: 256
+      MAX_HEAP_SIZE: 1024M
+      HEAP_NEWSIZE: 256M
+      # Fix for slow startup on ARM/Mac
+      JVM_OPTS: "-Djava.security.egd=file:/dev/./urandom"
+      # JMX Exporter
+      JVM_EXTRA_OPTS: "-Dcom.sun.management.jmxremote.port=7199 -Dcom.sun.management.jmxremote.ssl=false -Dcom.sun.management.jmxremote.authenticate=false"
+    volumes:
+      - cassandra-data:/var/lib/cassandra
+      - ./cassandra/init.cql:/docker-entrypoint-initdb.d/init.cql:ro
+    networks:
+      - lambda-network
+    healthcheck:
+      test: ["CMD-SHELL", "cqlsh -e 'DESCRIBE KEYSPACES;' || exit 1"]
+      interval: 30s
+      timeout: 15s
+      retries: 10
+      start_period: 60s
+    restart: unless-stopped
+
+  # Inicialização do schema Cassandra
+  cassandra-init:
+    image: cassandra:4.1
+    container_name: cassandra-init
+    depends_on:
+      cassandra:
+        condition: service_healthy
+    networks:
+      - lambda-network
+    entrypoint: ["/bin/bash", "-c"]
+    command: |
+      "
+      echo '>>> Aguardando Cassandra ficar pronto...'
+      sleep 10
+      echo '>>> Executando script de inicialização...'
+      cqlsh cassandra 9042 -f /init.cql
+      echo '>>> Schema Cassandra criado com sucesso!'
+      "
+    volumes:
+      - ./cassandra/init.cql:/init.cql:ro
+    restart: "no"
+
+  # ─────────────────────────────────────────────────────────────
+  # PROMETHEUS - Coleta de Métricas (Observabilidade)
+  # ─────────────────────────────────────────────────────────────
+  prometheus:
+    image: prom/prometheus:v2.48.0
+    container_name: prometheus
+    hostname: prometheus
+    ports:
+      - "9090:9090"   # Web UI
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.path=/prometheus"
+      - "--storage.tsdb.retention.time=${PROMETHEUS_RETENTION:-15d}"
+      - "--web.enable-lifecycle"
+      - "--web.enable-admin-api"
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-data:/prometheus
+    networks:
+      - lambda-network
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:9090/-/healthy || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  # ─────────────────────────────────────────────────────────────
+  # GRAFANA - Dashboards de Monitoramento
+  # ─────────────────────────────────────────────────────────────
+  grafana:
+    image: grafana/grafana:10.2.0
+    container_name: grafana
+    hostname: grafana
+    ports:
+      - "3000:3000"   # Web UI
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GF_SECURITY_ADMIN_USER:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GF_SECURITY_ADMIN_PASSWORD:-admin}
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_SERVER_ROOT_URL: "http://localhost:3000"
+      GF_INSTALL_PLUGINS: ${GF_INSTALL_PLUGINS:-}
+      # Permite embedding de iframes
+      GF_SECURITY_ALLOW_EMBEDDING: "true"
+      GF_AUTH_ANONYMOUS_ENABLED: "true"
+      GF_AUTH_ANONYMOUS_ORG_ROLE: Viewer
+    volumes:
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./grafana/dashboards:/var/lib/grafana/dashboards:ro
+      - grafana-data:/var/lib/grafana
+    networks:
+      - lambda-network
+    depends_on:
+      prometheus:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:3000/api/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+# ═══════════════════════════════════════════════════════════════
+# REDE - Comunicação entre todos os containers
+# ═══════════════════════════════════════════════════════════════
+networks:
+  lambda-network:
+    driver: bridge
+    name: lambda-network
+    ipam:
+      config:
+        - subnet: 172.25.0.0/16
+
+# ═══════════════════════════════════════════════════════════════
+# VOLUMES - Persistência de Dados
+# ═══════════════════════════════════════════════════════════════
+volumes:
+  kafka-data:
+    name: lambda-kafka-data
+  namenode-data:
+    name: lambda-namenode-data
+  datanode-data:
+    name: lambda-datanode-data
+  spark-logs:
+    name: lambda-spark-logs
+  cassandra-data:
+    name: lambda-cassandra-data
+  prometheus-data:
+    name: lambda-prometheus-data
+  grafana-data:
+    name: lambda-grafana-data
