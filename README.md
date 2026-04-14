@@ -42,7 +42,6 @@ Infraestrutura Docker completa para a **Arquitetura Lambda** aplicada ao process
 
 | Serviço | Imagem | Porta | Propósito |
 |---|---|---|---|
-| Zookeeper | `confluentinc/cp-zookeeper:7.5.0` | 2181 | Coordenação Kafka |
 | Kafka | `confluentinc/cp-kafka:7.5.0` | 9092, 9093, 9101 | Ingestão e buffer |
 | NameNode | `bde2020/hadoop-namenode` | 9870, 9000 | HDFS Master |
 | DataNode | `bde2020/hadoop-datanode` | 9864 | HDFS Storage |
@@ -99,7 +98,7 @@ watch docker compose ps
 
 ```bash
 # Instalar dependências no container Spark
-docker compose exec spark-master pip install kafka-python
+docker compose exec spark-master pip install kafka-python cassandra-driver
 
 # Rodar o produtor (envia dados sintéticos DATASUS)
 docker compose exec spark-master python /opt/spark-apps/producer.py \
