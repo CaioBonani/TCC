@@ -2,13 +2,28 @@
 
 Este guia prático mostra como rodar o pipeline completo passando por todas as camadas da Arquitetura Lambda (Producer -> Kafka -> HDFS -> Spark Streaming -> Spark Batch -> Cassandra -> Grafana).
 
-## 1. Inicializar o Ambiente Docker
+## 1. Preparar a conexão PostgreSQL
 Certifique-se de estar na pasta raiz do projeto (`/Users/caiobonani/Documents/TCC/CODIGOS`).
+
+Preencha `app/db_connection_config.py` com os mesmos dados de conexao do DBeaver. Se o DBeaver precisa de tunelamento SSH, deixe `SSH_TUNNEL["enabled"] = True`.
+
+---
+
+## 2. Inicializar o Ambiente Docker
 
 ```bash
 docker compose up -d
 ```
-Verifique se todos os containers estão saudáveis (healthy) antes de prosseguir.
+
+O Compose sobe a infraestrutura e tambem inicia os processos 24/7:
+
+- `producer`: PostgreSQL -> Kafka
+- `kafka-to-hdfs`: Kafka -> HDFS
+- `speed-layer`: Kafka -> Cassandra
+- `batch-layer-scheduler`: HDFS -> Cassandra periodicamente
+- `cassandra-viewer`: interface web read-only para consultar `speed_view`, `batch_view` e `merged_view`
+
+Verifique se os containers estão saudáveis e se os jobs estão rodando:
 
 ```bash
 watch docker compose ps
@@ -16,86 +31,38 @@ watch docker compose ps
 
 ---
 
-## 2. Preparar Dependências
-
-O container do Spark precisa dos pacotes Python para se conectar ao Kafka, ao Cassandra e ao PostgreSQL:
+## 3. Acompanhar os processos
 
 ```bash
-docker compose exec spark-master pip install -r /opt/spark-apps/requirements.txt
+docker compose logs -f producer
+docker compose logs -f kafka-to-hdfs
+docker compose logs -f speed-layer
+docker compose logs -f batch-layer-scheduler
+docker compose logs -f cassandra-viewer
 ```
 
 ---
 
-## 3. Iniciar a Ingestão de Dados (Producer)
-Abra um terminal dedicado para o **Produtor**. Ele le a tabela real `public.aih` no PostgreSQL e faz um data replay em "conta-gotas", enviando lotes pequenos para o Kafka como se fossem eventos chegando em tempo real.
+## 4. Ajustar parâmetros
+
+Os principais parametros ficam no `.env`:
 
 ```bash
-# Deixe este terminal aberto rodando:
-docker compose exec -e POSTGRES_PASSWORD='<senha>' spark-master python3 /opt/spark-apps/producer.py \
-    --bootstrap-server kafka:9092 \
-    --db-host host.docker.internal \
-    --db-port 5432 \
-    --db-name datasus \
-    --db-user postgres \
-    --db-schema public \
-    --db-table aih \
-    --batch-size 20 \
-    --interval 1.0 \
-    --loop
+PRODUCER_BATCH_SIZE=20
+PRODUCER_INTERVAL_SECONDS=1.0
+PRODUCER_EXTRA_ARGS=
+BATCH_INTERVAL_SECONDS=3600
 ```
-Use `--start-year`, `--end-year`, `--start-dt-inter` e `--end-dt-inter` para recortar o replay. Use `--total N` para encerrar depois de N mensagens; sem `--loop`, o producer para ao fim da selecao.
 
----
-
-## 4. Iniciar a Camada de Retenção (Kafka -> HDFS)
-Abra **outro terminal**. Este job joga raw data do Kafka para o HDFS (cria o Master Dataset).
+Para recortar o replay, por exemplo:
 
 ```bash
-# Deixe rodando neste terminal:
-docker compose exec spark-master /opt/spark/bin/spark-submit \
-    --master spark://spark-master:7077 \
-    --total-executor-cores 1 \
-    --executor-memory 512m \
-    --packages org.apache.spark:spark-sql-kafka-0-10_2.12:3.4.0 \
-    /opt/spark-apps/kafka_to_hdfs.py
+PRODUCER_EXTRA_ARGS=--start-year 2020 --end-year 2020
 ```
 
 ---
 
-## 5. Iniciar a Speed Layer (Spark Streaming)
-Abra um **terceiro terminal**. Esta é a via rápida: processa dados do Kafka em janelas de 60s e salva agregações temporárias (`speed_view`) no Cassandra em micro-batches.
-
-```bash
-# Deixe rodando neste terminal:
-docker compose exec spark-master /opt/spark/bin/spark-submit \
-    --master spark://spark-master:7077 \
-    --total-executor-cores 1 \
-    --executor-memory 512m \
-    --packages org.apache.spark:spark-sql-kafka-0-10_2.12:3.4.0,com.datastax.spark:spark-cassandra-connector_2.12:3.4.1 \
-    /opt/spark-apps/speed_layer.py
-```
-
----
-
-## 6. Rodar a Batch Layer (Spark Batch)
-Enquanto a Speed Layer cuida do tempo real, a Batch Layer deve ser executada periodicamente para recalcular a base histórica com precisão, a partir do HDFS.
-
-Abra um **quarto terminal** e execute:
-
-```bash
-# O processo roda, atualiza o Cassandra (batch_view e merged_view) e finaliza:
-docker compose exec spark-master /opt/spark/bin/spark-submit \
-    --master spark://spark-master:7077 \
-    --total-executor-cores 1 \
-    --executor-memory 512m \
-    --packages org.apache.spark:spark-sql-kafka-0-10_2.12:3.4.0,com.datastax.spark:spark-cassandra-connector_2.12:3.4.1 \
-    /opt/spark-apps/batch_layer.py
-```
-> Sempre que quiser consolidar os dados novos que caíram no HDFS, execute este comando novamente.
-
----
-
-## 7. Acessar os Resultados (Serving Layer e Monitoramento)
+## 5. Acessar os Resultados (Serving Layer e Monitoramento)
 
 ### Painel do Cassandra (Consultas)
 Para ver os dados processados salvos no Cassandra:
@@ -113,6 +80,7 @@ SELECT * FROM merged_view LIMIT 10;
 ### Dashboards e Métricas
 Agora que os jobs estão rodando, você pode visualizar a saúde do cluster e as métricas de tempo real:
 
+* **Cassandra Viewer:** [http://localhost:8088](http://localhost:8088)
 * **Grafana (Dashboards):** [http://localhost:3000](http://localhost:3000) (User/Pass: `admin`/`admin`)
 * **Prometheus:** [http://localhost:9090](http://localhost:9090)
 * **Spark UI:** [http://localhost:8080](http://localhost:8080)
@@ -120,8 +88,8 @@ Agora que os jobs estão rodando, você pode visualizar a saúde do cluster e as
 
 ---
 
-## 8. Encerrar
-Para parar tudo e limpar, pressione `Ctrl+C` nos terminais abertos e então:
+## 6. Encerrar
+Para parar tudo:
 
 ```bash
 # Parar os containers (preservando os dados)

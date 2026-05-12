@@ -226,6 +226,177 @@ services:
     restart: unless-stopped
 
   # ─────────────────────────────────────────────────────────────
+  # PRODUCER - Replay PostgreSQL -> Kafka
+  # ─────────────────────────────────────────────────────────────
+  producer:
+    image: apache/spark-py:latest
+    container_name: producer
+    hostname: producer
+    user: root
+    environment:
+      KAFKA_BOOTSTRAP_SERVER: kafka:9093
+      KAFKA_TOPIC: ${KAFKA_TOPIC:-datasus-internacoes}
+      PRODUCER_BATCH_SIZE: ${PRODUCER_BATCH_SIZE:-20}
+      PRODUCER_INTERVAL_SECONDS: ${PRODUCER_INTERVAL_SECONDS:-1.0}
+      PRODUCER_EXTRA_ARGS: ${PRODUCER_EXTRA_ARGS:-}
+    command: ["/bin/bash", "/opt/lambda-scripts/run-producer.sh"]
+    volumes:
+      - ./app:/opt/spark-apps:ro
+      - ./scripts:/opt/lambda-scripts:ro
+    networks:
+      - lambda-network
+    depends_on:
+      kafka:
+        condition: service_healthy
+      kafka-init:
+        condition: service_completed_successfully
+    restart: unless-stopped
+
+  # ─────────────────────────────────────────────────────────────
+  # KAFKA -> HDFS - Master Dataset contínuo
+  # ─────────────────────────────────────────────────────────────
+  kafka-to-hdfs:
+    image: apache/spark-py:latest
+    container_name: kafka-to-hdfs
+    hostname: kafka-to-hdfs
+    user: root
+    environment:
+      SPARK_MASTER_URL: ${SPARK_MASTER_URL:-spark://spark-master:7077}
+      SPARK_JOB_CORES: ${SPARK_JOB_CORES:-1}
+      SPARK_JOB_MEMORY: ${SPARK_JOB_MEMORY:-512m}
+      SPARK_KAFKA_PACKAGE: ${SPARK_KAFKA_PACKAGE:-org.apache.spark:spark-sql-kafka-0-10_2.12:3.4.0}
+    command: ["/bin/bash", "/opt/lambda-scripts/run-kafka-to-hdfs.sh"]
+    volumes:
+      - ./spark/spark-defaults.conf:/opt/spark/conf/spark-defaults.conf:ro
+      - ./app:/opt/spark-apps:ro
+      - ./scripts:/opt/lambda-scripts:ro
+      - spark-logs:/opt/spark/logs
+    networks:
+      - lambda-network
+    depends_on:
+      kafka:
+        condition: service_healthy
+      kafka-init:
+        condition: service_completed_successfully
+      namenode:
+        condition: service_healthy
+      datanode:
+        condition: service_healthy
+      spark-master:
+        condition: service_healthy
+      spark-worker:
+        condition: service_started
+    restart: unless-stopped
+
+  # ─────────────────────────────────────────────────────────────
+  # SPEED LAYER - Kafka -> Cassandra contínuo
+  # ─────────────────────────────────────────────────────────────
+  speed-layer:
+    image: apache/spark-py:latest
+    container_name: speed-layer
+    hostname: speed-layer
+    user: root
+    environment:
+      SPARK_MASTER_URL: ${SPARK_MASTER_URL:-spark://spark-master:7077}
+      SPARK_JOB_CORES: ${SPARK_JOB_CORES:-1}
+      SPARK_JOB_MEMORY: ${SPARK_JOB_MEMORY:-512m}
+      SPARK_KAFKA_PACKAGE: ${SPARK_KAFKA_PACKAGE:-org.apache.spark:spark-sql-kafka-0-10_2.12:3.4.0}
+      SPARK_CASSANDRA_PACKAGE: ${SPARK_CASSANDRA_PACKAGE:-com.datastax.spark:spark-cassandra-connector_2.12:3.4.1}
+    command: ["/bin/bash", "/opt/lambda-scripts/run-speed-layer.sh"]
+    volumes:
+      - ./spark/spark-defaults.conf:/opt/spark/conf/spark-defaults.conf:ro
+      - ./app:/opt/spark-apps:ro
+      - ./scripts:/opt/lambda-scripts:ro
+      - spark-logs:/opt/spark/logs
+    networks:
+      - lambda-network
+    depends_on:
+      kafka:
+        condition: service_healthy
+      kafka-init:
+        condition: service_completed_successfully
+      cassandra:
+        condition: service_healthy
+      cassandra-init:
+        condition: service_completed_successfully
+      spark-master:
+        condition: service_healthy
+      spark-worker:
+        condition: service_started
+    restart: unless-stopped
+
+  # ─────────────────────────────────────────────────────────────
+  # BATCH LAYER - Reprocessamento periódico HDFS -> Cassandra
+  # ─────────────────────────────────────────────────────────────
+  batch-layer-scheduler:
+    image: apache/spark-py:latest
+    container_name: batch-layer-scheduler
+    hostname: batch-layer-scheduler
+    user: root
+    environment:
+      SPARK_MASTER_URL: ${SPARK_MASTER_URL:-spark://spark-master:7077}
+      BATCH_INTERVAL_SECONDS: ${BATCH_INTERVAL_SECONDS:-3600}
+      SPARK_JOB_CORES: ${SPARK_JOB_CORES:-1}
+      SPARK_JOB_MEMORY: ${SPARK_JOB_MEMORY:-512m}
+      SPARK_KAFKA_PACKAGE: ${SPARK_KAFKA_PACKAGE:-org.apache.spark:spark-sql-kafka-0-10_2.12:3.4.0}
+      SPARK_CASSANDRA_PACKAGE: ${SPARK_CASSANDRA_PACKAGE:-com.datastax.spark:spark-cassandra-connector_2.12:3.4.1}
+    command: ["/bin/bash", "/opt/lambda-scripts/run-batch-layer-scheduler.sh"]
+    volumes:
+      - ./spark/spark-defaults.conf:/opt/spark/conf/spark-defaults.conf:ro
+      - ./app:/opt/spark-apps:ro
+      - ./scripts:/opt/lambda-scripts:ro
+      - spark-logs:/opt/spark/logs
+    networks:
+      - lambda-network
+    depends_on:
+      namenode:
+        condition: service_healthy
+      datanode:
+        condition: service_healthy
+      cassandra:
+        condition: service_healthy
+      cassandra-init:
+        condition: service_completed_successfully
+      spark-master:
+        condition: service_healthy
+      spark-worker:
+        condition: service_started
+    restart: unless-stopped
+
+  # ─────────────────────────────────────────────────────────────
+  # CASSANDRA VIEWER - Interface web read-only para as views
+  # ─────────────────────────────────────────────────────────────
+  cassandra-viewer:
+    image: python:3.11-slim
+    container_name: cassandra-viewer
+    hostname: cassandra-viewer
+    ports:
+      - "8088:8088"
+    environment:
+      CASSANDRA_HOST: cassandra
+      CASSANDRA_PORT: 9042
+      CASSANDRA_KEYSPACE: ${CASSANDRA_KEYSPACE:-lambda_arch}
+      CASSANDRA_VIEWER_MAX_LIMIT: ${CASSANDRA_VIEWER_MAX_LIMIT:-500}
+    command: ["/bin/bash", "/opt/lambda-scripts/run-cassandra-viewer.sh"]
+    volumes:
+      - ./app:/opt/spark-apps:ro
+      - ./scripts:/opt/lambda-scripts:ro
+    networks:
+      - lambda-network
+    depends_on:
+      cassandra:
+        condition: service_healthy
+      cassandra-init:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD-SHELL", "python3 -c \"import urllib.request; urllib.request.urlopen('http://localhost:8088/health', timeout=3).read()\" || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    restart: unless-stopped
+
+  # ─────────────────────────────────────────────────────────────
   # CASSANDRA - Serving Layer (Batch Views + Speed Views)
   # ─────────────────────────────────────────────────────────────
   cassandra:

@@ -17,17 +17,24 @@ Uso:
 """
 
 import argparse
+import importlib.util
 import hashlib
 import json
 import os
 import re
 import time
+from contextlib import contextmanager
 from datetime import datetime
 from decimal import Decimal
+from pathlib import Path
 from typing import Any, Dict, List, Optional, Sequence, Tuple
 
-from kafka import KafkaProducer
-from kafka.errors import NoBrokersAvailable
+try:
+    from kafka import KafkaProducer
+    from kafka.errors import NoBrokersAvailable
+except ImportError:
+    KafkaProducer = None
+    NoBrokersAvailable = Exception
 
 
 AIH_COLUMNS: Tuple[str, ...] = (
@@ -108,6 +115,7 @@ IBGE_UF_PREFIX_TO_SIGLA = {
 }
 
 IDENTIFIER_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
+CONFIG_PATH = Path(__file__).with_name("db_connection_config.py")
 
 
 def json_default(value: Any) -> Any:
@@ -119,8 +127,35 @@ def json_default(value: Any) -> Any:
     raise TypeError(f"Tipo nao serializavel em JSON: {type(value)!r}")
 
 
+def carregar_config_hardcoded() -> Dict[str, Dict[str, Any]]:
+    """Carrega credenciais locais se app/db_connection_config.py existir."""
+    if not CONFIG_PATH.exists():
+        return {}
+
+    spec = importlib.util.spec_from_file_location("db_connection_config", CONFIG_PATH)
+    if spec is None or spec.loader is None:
+        raise RuntimeError(f"Nao foi possivel carregar {CONFIG_PATH}")
+
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+
+    return {
+        "database": getattr(module, "DATABASE", {}),
+        "ssh_tunnel": getattr(module, "SSH_TUNNEL", {}),
+    }
+
+
+def config_get(config: Dict[str, Dict[str, Any]], section: str, key: str, default: Any = None) -> Any:
+    return config.get(section, {}).get(key, default)
+
+
 def criar_producer(bootstrap_server: str, max_retries: int = 30) -> KafkaProducer:
     """Cria o KafkaProducer com retry automatico."""
+    if KafkaProducer is None:
+        raise RuntimeError(
+            "Dependencia ausente: instale kafka-python para enviar mensagens ao Kafka."
+        )
+
     for attempt in range(1, max_retries + 1):
         try:
             producer = KafkaProducer(
@@ -146,7 +181,7 @@ def criar_producer(bootstrap_server: str, max_retries: int = 30) -> KafkaProduce
     raise RuntimeError(f"Nao foi possivel conectar ao Kafka apos {max_retries} tentativas")
 
 
-def criar_conexao_postgres(args: argparse.Namespace):
+def criar_conexao_postgres(args: argparse.Namespace, host: Optional[str] = None, port: Optional[int] = None):
     """Abre conexao com PostgreSQL usando psycopg2 apenas quando necessario."""
     try:
         import psycopg2
@@ -159,13 +194,46 @@ def criar_conexao_postgres(args: argparse.Namespace):
         return psycopg2.connect(args.db_dsn)
 
     return psycopg2.connect(
-        host=args.db_host,
-        port=args.db_port,
+        host=host or args.db_host,
+        port=port or args.db_port,
         dbname=args.db_name,
         user=args.db_user,
         password=args.db_password,
         connect_timeout=args.db_connect_timeout,
     )
+
+
+@contextmanager
+def abrir_tunel_ssh(args: argparse.Namespace):
+    if not args.ssh_tunnel:
+        yield args.db_host, args.db_port
+        return
+
+    try:
+        from sshtunnel import SSHTunnelForwarder
+    except ImportError as exc:
+        raise RuntimeError(
+            "Dependencia ausente: instale sshtunnel para usar --ssh-tunnel."
+        ) from exc
+
+    ssh_kwargs: Dict[str, Any] = {
+        "ssh_address_or_host": (args.ssh_host, args.ssh_port),
+        "ssh_username": args.ssh_user,
+        "remote_bind_address": (args.db_host, args.db_port),
+        "local_bind_address": (args.ssh_local_host, args.ssh_local_port),
+    }
+
+    if args.ssh_password:
+        ssh_kwargs["ssh_password"] = args.ssh_password
+    if args.ssh_pkey:
+        ssh_kwargs["ssh_pkey"] = args.ssh_pkey
+
+    print(
+        "Abrindo tunel SSH: "
+        f"{args.ssh_user}@{args.ssh_host}:{args.ssh_port} -> {args.db_host}:{args.db_port}"
+    )
+    with SSHTunnelForwarder(**ssh_kwargs) as tunnel:
+        yield tunnel.local_bind_host, tunnel.local_bind_port
 
 
 def validar_identificador(valor: str, nome: str) -> str:
@@ -227,11 +295,15 @@ def montar_query_aih(args: argparse.Namespace) -> Tuple[str, List[Any]]:
     if filtros:
         query += " WHERE " + " AND ".join(filtros)
 
-    query += " ORDER BY " + montar_order_by(args.order_by)
+    if not args.no_order:
+        query += " ORDER BY " + montar_order_by(args.order_by)
 
     if args.limit > 0:
         query += " LIMIT %s"
         params.append(args.limit)
+    elif args.total > 0:
+        query += " LIMIT %s"
+        params.append(args.total)
 
     return query, params
 
@@ -430,7 +502,7 @@ def validar_datas_args(args: argparse.Namespace) -> None:
             raise ValueError(f"--{nome.replace('_', '-')} deve estar no formato AAAAMMDD")
 
 
-def criar_parser() -> argparse.ArgumentParser:
+def criar_parser(config: Dict[str, Dict[str, Any]]) -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Produtor Kafka - Data Replay DATASUS AIH")
 
     parser.add_argument("--bootstrap-server", default="kafka:9092", help="Kafka bootstrap server")
@@ -441,20 +513,33 @@ def criar_parser() -> argparse.ArgumentParser:
     parser.add_argument("--dry-run", action="store_true", help="Le do banco e transforma, mas nao envia ao Kafka")
     parser.add_argument("--print-events", action="store_true", help="Imprime cada evento JSON gerado")
 
-    parser.add_argument("--db-dsn", default=os.getenv("POSTGRES_DSN"), help="DSN PostgreSQL completo")
-    parser.add_argument("--db-host", default=os.getenv("POSTGRES_HOST", "postgres"), help="Host PostgreSQL")
-    parser.add_argument("--db-port", type=int, default=int(os.getenv("POSTGRES_PORT", "5432")), help="Porta PostgreSQL")
-    parser.add_argument("--db-name", default=os.getenv("POSTGRES_DB", "datasus"), help="Database PostgreSQL")
-    parser.add_argument("--db-user", default=os.getenv("POSTGRES_USER", "postgres"), help="Usuario PostgreSQL")
-    parser.add_argument("--db-password", default=os.getenv("POSTGRES_PASSWORD"), help="Senha PostgreSQL")
-    parser.add_argument("--db-schema", default=os.getenv("POSTGRES_SCHEMA", "public"), help="Schema da tabela AIH")
-    parser.add_argument("--db-table", default=os.getenv("POSTGRES_TABLE", "aih"), help="Tabela AIH")
+    parser.add_argument("--db-dsn", default=config_get(config, "database", "dsn", os.getenv("POSTGRES_DSN")), help="DSN PostgreSQL completo")
+    parser.add_argument("--db-host", default=config_get(config, "database", "host", os.getenv("POSTGRES_HOST", "postgres")), help="Host PostgreSQL visto a partir do servidor SSH ou da rede local")
+    parser.add_argument("--db-port", type=int, default=int(config_get(config, "database", "port", os.getenv("POSTGRES_PORT", "5432"))), help="Porta PostgreSQL")
+    parser.add_argument("--db-name", default=config_get(config, "database", "name", os.getenv("POSTGRES_DB", "datasus")), help="Database PostgreSQL")
+    parser.add_argument("--db-user", default=config_get(config, "database", "user", os.getenv("POSTGRES_USER", "postgres")), help="Usuario PostgreSQL")
+    parser.add_argument("--db-password", default=config_get(config, "database", "password", os.getenv("POSTGRES_PASSWORD")), help="Senha PostgreSQL")
+    parser.add_argument("--db-schema", default=config_get(config, "database", "schema", os.getenv("POSTGRES_SCHEMA", "public")), help="Schema da tabela AIH")
+    parser.add_argument("--db-table", default=config_get(config, "database", "table", os.getenv("POSTGRES_TABLE", "aih")), help="Tabela AIH")
     parser.add_argument(
         "--db-connect-timeout",
         type=int,
-        default=int(os.getenv("POSTGRES_CONNECT_TIMEOUT", "10")),
+        default=int(config_get(config, "database", "connect_timeout", os.getenv("POSTGRES_CONNECT_TIMEOUT", "10"))),
         help="Timeout de conexao PostgreSQL em segundos",
     )
+    parser.add_argument(
+        "--ssh-tunnel",
+        action="store_true",
+        default=bool(config_get(config, "ssh_tunnel", "enabled", False)),
+        help="Abre tunel SSH para acessar o PostgreSQL, como no DBeaver.",
+    )
+    parser.add_argument("--ssh-host", default=config_get(config, "ssh_tunnel", "host", os.getenv("SSH_TUNNEL_HOST")), help="Host SSH/bastion")
+    parser.add_argument("--ssh-port", type=int, default=int(config_get(config, "ssh_tunnel", "port", os.getenv("SSH_TUNNEL_PORT", "22"))), help="Porta SSH")
+    parser.add_argument("--ssh-user", default=config_get(config, "ssh_tunnel", "user", os.getenv("SSH_TUNNEL_USER")), help="Usuario SSH")
+    parser.add_argument("--ssh-password", default=config_get(config, "ssh_tunnel", "password", os.getenv("SSH_TUNNEL_PASSWORD")), help="Senha SSH")
+    parser.add_argument("--ssh-pkey", default=config_get(config, "ssh_tunnel", "pkey", os.getenv("SSH_TUNNEL_PKEY")), help="Caminho da chave privada SSH")
+    parser.add_argument("--ssh-local-host", default=config_get(config, "ssh_tunnel", "local_host", "127.0.0.1"), help="Host local do tunel")
+    parser.add_argument("--ssh-local-port", type=int, default=int(config_get(config, "ssh_tunnel", "local_port", "0")), help="Porta local do tunel; 0 escolhe automaticamente")
 
     parser.add_argument("--start-year", type=int, help="Filtra ano_cmpt >= valor")
     parser.add_argument("--end-year", type=int, help="Filtra ano_cmpt <= valor")
@@ -465,6 +550,11 @@ def criar_parser() -> argparse.ArgumentParser:
         "--order-by",
         default=",".join(DEFAULT_ORDER_BY),
         help="Colunas do DDL para ordenacao, separadas por virgula. Prefixe com '-' para DESC.",
+    )
+    parser.add_argument(
+        "--no-order",
+        action="store_true",
+        help="Nao adiciona ORDER BY na consulta. Use para iniciar streaming rapidamente em tabelas grandes.",
     )
     parser.add_argument("--fetch-size", type=int, default=1000, help="Tamanho do fetch server-side no PostgreSQL")
     parser.add_argument("--loop", action="store_true", help="Ao chegar ao fim da selecao, reinicia o replay")
@@ -514,11 +604,14 @@ def enviar_lote(
 
 
 def main() -> None:
-    parser = criar_parser()
+    config = carregar_config_hardcoded()
+    parser = criar_parser(config)
     args = parser.parse_args()
     validar_datas_args(args)
     validar_identificador(args.db_schema, "--db-schema")
     validar_identificador(args.db_table, "--db-table")
+    if args.ssh_tunnel and (not args.ssh_host or not args.ssh_user):
+        raise ValueError("--ssh-host e --ssh-user sao obrigatorios quando --ssh-tunnel esta ativo")
 
     if args.batch_size <= 0:
         raise ValueError("--batch-size deve ser maior que zero")
@@ -536,6 +629,7 @@ def main() -> None:
     print(f"  Broker:       {args.bootstrap_server}")
     print(f"  Topico:       {args.topic}")
     print(f"  Fonte:        PostgreSQL {source_table}")
+    print(f"  Tunel SSH:    {'sim' if args.ssh_tunnel else 'nao'}")
     print(f"  Intervalo:    {args.interval}s")
     print(f"  Batch size:   {args.batch_size}")
     print(f"  Total:        {'toda a selecao' if args.total == 0 else args.total}")
@@ -548,64 +642,65 @@ def main() -> None:
     cycle = 0
 
     try:
-        while True:
-            cycle += 1
-            print(f"Iniciando ciclo de replay {cycle}: {query} | params={params}")
+        with abrir_tunel_ssh(args) as (db_host, db_port):
+            while True:
+                cycle += 1
+                print(f"Iniciando ciclo de replay {cycle}: {query} | params={params}")
 
-            conn = criar_conexao_postgres(args)
-            conn.autocommit = False
-            try:
-                from psycopg2.extras import RealDictCursor
+                conn = criar_conexao_postgres(args, host=db_host, port=db_port)
+                conn.autocommit = False
+                try:
+                    from psycopg2.extras import RealDictCursor
 
-                cursor_name = f"aih_replay_{os.getpid()}_{cycle}"
-                cursor = conn.cursor(name=cursor_name, cursor_factory=RealDictCursor)
-                cursor.itersize = args.fetch_size
-                cursor.execute(query, params)
+                    cursor_name = f"aih_replay_{os.getpid()}_{cycle}"
+                    cursor = conn.cursor(name=cursor_name, cursor_factory=RealDictCursor)
+                    cursor.itersize = args.fetch_size
+                    cursor.execute(query, params)
 
-                while True:
-                    lote = buscar_lote(cursor, args.batch_size)
-                    if not lote:
-                        break
-
-                    if args.total > 0:
-                        restante = args.total - total_enviadas
-                        if restante <= 0:
+                    while True:
+                        lote = buscar_lote(cursor, args.batch_size)
+                        if not lote:
                             break
-                        lote = lote[:restante]
 
-                    enviadas = enviar_lote(
-                        producer=producer,
-                        topic=args.topic,
-                        rows=lote,
-                        sequence_start=total_enviadas,
-                        cycle=cycle,
-                        source_table=source_table,
-                        dry_run=args.dry_run,
-                        print_events=args.print_events,
-                    )
-                    total_enviadas += enviadas
+                        if args.total > 0:
+                            restante = args.total - total_enviadas
+                            if restante <= 0:
+                                break
+                            lote = lote[:restante]
 
-                    modo = "Lidas" if args.dry_run else "Enviadas"
-                    print(
-                        f"[{datetime.now().strftime('%H:%M:%S')}] "
-                        f"{modo}: {total_enviadas} mensagens | "
-                        f"Ultimo lote: {enviadas} registros | {resumo_datas(lote)}"
-                    )
+                        enviadas = enviar_lote(
+                            producer=producer,
+                            topic=args.topic,
+                            rows=lote,
+                            sequence_start=total_enviadas,
+                            cycle=cycle,
+                            source_table=source_table,
+                            dry_run=args.dry_run,
+                            print_events=args.print_events,
+                        )
+                        total_enviadas += enviadas
 
-                    if args.total > 0 and total_enviadas >= args.total:
-                        print(f"Total de {args.total} mensagens atingido. Encerrando.")
-                        return
+                        modo = "Lidas" if args.dry_run else "Enviadas"
+                        print(
+                            f"[{datetime.now().strftime('%H:%M:%S')}] "
+                            f"{modo}: {total_enviadas} mensagens | "
+                            f"Ultimo lote: {enviadas} registros | {resumo_datas(lote)}"
+                        )
 
-                    time.sleep(args.interval)
-            finally:
-                conn.close()
+                        if args.total > 0 and total_enviadas >= args.total:
+                            print(f"Total de {args.total} mensagens atingido. Encerrando.")
+                            return
 
-            if not args.loop:
-                print("Fim da selecao PostgreSQL. Replay concluido.")
-                return
+                        time.sleep(args.interval)
+                finally:
+                    conn.close()
 
-            print(f"Fim da selecao. Reiniciando em {args.loop_sleep}s por causa de --loop.")
-            time.sleep(args.loop_sleep)
+                if not args.loop:
+                    print("Fim da selecao PostgreSQL. Replay concluido.")
+                    return
+
+                print(f"Fim da selecao. Reiniciando em {args.loop_sleep}s por causa de --loop.")
+                time.sleep(args.loop_sleep)
 
     except KeyboardInterrupt:
         print(f"Interrompido pelo usuario. Total processado: {total_enviadas}")

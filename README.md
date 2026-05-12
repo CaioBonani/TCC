@@ -45,9 +45,14 @@ Infraestrutura Docker completa para a **Arquitetura Lambda** aplicada ao process
 | Kafka | `confluentinc/cp-kafka:7.5.0` | 9092, 9093, 9101 | Ingestão e buffer |
 | NameNode | `bde2020/hadoop-namenode` | 9870, 9000 | HDFS Master |
 | DataNode | `bde2020/hadoop-datanode` | 9864 | HDFS Storage |
-| Spark Master | `bitnami/spark:3.5` | 8080, 7077, 4040 | Processamento |
-| Spark Worker | `bitnami/spark:3.5` | 8081 | Worker |
+| Spark Master | `apache/spark-py:latest` | 8080, 7077, 4040 | Processamento |
+| Spark Worker | `apache/spark-py:latest` | 8081 | Worker |
+| Producer | `apache/spark-py:latest` | — | Replay PostgreSQL → Kafka |
+| Kafka → HDFS | `apache/spark-py:latest` | — | Master Dataset contínuo |
+| Speed Layer | `apache/spark-py:latest` | — | Streaming Kafka → Cassandra |
+| Batch Scheduler | `apache/spark-py:latest` | — | Reprocessamento periódico HDFS → Cassandra |
 | Cassandra | `cassandra:4.1` | 9042, 7199 | Serving Layer |
+| Cassandra Viewer | `python:3.11-slim` | 8088 | Navegação web read-only nas views |
 | Prometheus | `prom/prometheus:v2.48.0` | 9090 | Métricas |
 | Grafana | `grafana/grafana:10.2.0` | 3000 | Dashboards |
 
@@ -92,54 +97,44 @@ Isso pode levar 1-2 minutos na primeira vez. O Cassandra é geralmente o último
 watch docker compose ps
 ```
 
-## 📊 Pipeline de Dados
+## 📊 Pipeline de Dados 24/7
 
-### Passo 1: Injetar dados (Produtor Kafka)
+Ao executar `docker compose up -d`, o Compose tambem inicia os processos da aplicacao:
+
+| Serviço Compose | Processo | Política |
+|---|---|---|
+| `producer` | Le `public.aih` no PostgreSQL via tunel SSH e envia eventos ao Kafka | contínuo com `--loop` |
+| `kafka-to-hdfs` | Consome Kafka e grava o Master Dataset no HDFS | streaming contínuo |
+| `speed-layer` | Processa Kafka em micro-batches e atualiza `speed_view` no Cassandra | streaming contínuo |
+| `batch-layer-scheduler` | Reprocessa o HDFS e atualiza `batch_view`/`merged_view` | roda a cada `BATCH_INTERVAL_SECONDS` |
+
+Configure `app/db_connection_config.py` com os mesmos dados de conexao do DBeaver antes de subir o ambiente. Se o DBeaver precisa de tunelamento SSH, deixe `SSH_TUNNEL["enabled"] = True`.
+
+Para acompanhar os processos:
 
 ```bash
-# Instalar dependencias Python no container Spark
-docker compose exec spark-master pip install -r /opt/spark-apps/requirements.txt cassandra-driver
-
-# Rodar o produtor em modo data replay a partir da tabela PostgreSQL public.aih
-# Use host.docker.internal se o PostgreSQL estiver rodando no host da maquina.
-docker compose exec -e POSTGRES_PASSWORD='<senha>' spark-master python /opt/spark-apps/producer.py \
-    --bootstrap-server kafka:9092 \
-    --db-host host.docker.internal \
-    --db-port 5432 \
-    --db-name datasus \
-    --db-user postgres \
-    --db-schema public \
-    --db-table aih \
-    --batch-size 10 \
-    --interval 1.0 \
-    --loop
+docker compose ps
+docker compose logs -f producer
+docker compose logs -f kafka-to-hdfs
+docker compose logs -f speed-layer
+docker compose logs -f batch-layer-scheduler
 ```
 
-### Passo 2: Consumir Kafka → HDFS (Master Dataset)
+Para ver os dados do Cassandra no navegador:
 
-```bash
-docker compose exec spark-master spark-submit \
-    --master spark://spark-master:7077 \
-    --packages org.apache.spark:spark-sql-kafka-0-10_2.12:3.5.0 \
-    /opt/spark-apps/kafka_to_hdfs.py
+```text
+http://localhost:8088
 ```
 
-### Passo 3: Iniciar Speed Layer (Streaming)
+O viewer lista as tabelas do keyspace `lambda_arch`, mostra linhas com limite configuravel e aceita apenas consultas `SELECT`.
+
+Parametros principais ficam no `.env`:
 
 ```bash
-docker compose exec spark-master spark-submit \
-    --master spark://spark-master:7077 \
-    --packages org.apache.spark:spark-sql-kafka-0-10_2.12:3.5.0,com.datastax.spark:spark-cassandra-connector_2.12:3.5.0 \
-    /opt/spark-apps/speed_layer.py
-```
-
-### Passo 4: Executar Batch Layer (Reprocessamento)
-
-```bash
-docker compose exec spark-master spark-submit \
-    --master spark://spark-master:7077 \
-    --packages org.apache.spark:spark-sql-kafka-0-10_2.12:3.5.0,com.datastax.spark:spark-cassandra-connector_2.12:3.5.0 \
-    /opt/spark-apps/batch_layer.py
+PRODUCER_BATCH_SIZE=20
+PRODUCER_INTERVAL_SECONDS=1.0
+PRODUCER_EXTRA_ARGS=
+BATCH_INTERVAL_SECONDS=3600
 ```
 
 ## 🔗 URLs de Acesso
@@ -149,6 +144,7 @@ docker compose exec spark-master spark-submit \
 | Serviço | URL | Credenciais |
 |---|---|---|
 | **Grafana** | http://localhost:3000 | admin / admin |
+| **Cassandra Viewer** | http://localhost:8088 | — |
 | **Spark Master** | http://localhost:8080 | — |
 | **HDFS NameNode** | http://localhost:9870 | — |
 | **Prometheus** | http://localhost:9090 | — |

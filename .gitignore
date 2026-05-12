@@ -1,0 +1,5 @@
+app/db_connection_config.py
+.venv-dbtest/
+__pycache__/
+*.pyc
+.venv*
