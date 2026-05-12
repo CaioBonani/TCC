@@ -13,7 +13,7 @@ echo "  Lambda Architecture - Health Check"
 echo "══════════════════════════════════════════════════════"
 echo ""
 
-SERVICES=("zookeeper" "kafka" "namenode" "datanode" "spark-master" "spark-worker" "cassandra" "prometheus" "grafana")
+SERVICES=("kafka" "namenode" "datanode" "spark-master" "spark-worker" "cassandra" "prometheus" "grafana")
 ALL_OK=true
 
 for service in "${SERVICES[@]}"; do
