@@ -1,125 +1,135 @@
 #!/usr/bin/env python3
 """
 =============================================================
-PRODUTOR KAFKA - Simulação de Dados DATASUS (SIH/SUS)
+PRODUTOR KAFKA - Data Replay DATASUS (SIH/SUS)
 =============================================================
-Simula a ingestão de dados de internações hospitalares do SUS
-no tópico Kafka 'datasus-internacoes'.
+Le linhas reais da tabela PostgreSQL public.aih, definida em
+ddl_tabela.sql, e reemite os registros no Kafka em modo
+"conta-gotas" para simular ingestao near real-time em uma
+Arquitetura Lambda.
 
 Uso:
-    python producer.py [--bootstrap-server kafka:9092] [--topic datasus-internacoes] [--interval 1.0] [--batch-size 10]
+    python producer.py \
+        --bootstrap-server kafka:9092 \
+        --db-host postgres --db-name datasus --db-user postgres \
+        --batch-size 10 --interval 1.0
 =============================================================
 """
 
-import json
-import time
-import random
 import argparse
-import uuid
-from datetime import datetime, timedelta
+import hashlib
+import json
+import os
+import re
+import time
+from datetime import datetime
+from decimal import Decimal
+from typing import Any, Dict, List, Optional, Sequence, Tuple
+
 from kafka import KafkaProducer
 from kafka.errors import NoBrokersAvailable
 
-# ─── Dados de referência DATASUS ───
-UFS = [
-    "AC", "AL", "AP", "AM", "BA", "CE", "DF", "ES", "GO", "MA",
-    "MT", "MS", "MG", "PA", "PB", "PR", "PE", "PI", "RJ", "RN",
-    "RS", "RO", "RR", "SC", "SP", "SE", "TO"
-]
 
-# CIDs mais comuns em internações SUS
-CIDS = {
-    "A09": "Diarréia e gastroenterite de origem infecciosa presumível",
-    "I10": "Hipertensão essencial (primária)",
-    "J18": "Pneumonia por microrganismo não especificado",
-    "K35": "Apendicite aguda",
-    "O80": "Parto único espontâneo",
-    "S72": "Fratura do fêmur",
-    "I21": "Infarto agudo do miocárdio",
-    "J44": "Outras doenças pulmonares obstrutivas crônicas",
-    "E11": "Diabetes mellitus não insulino-dependente",
-    "N39": "Outros transtornos do trato urinário",
-    "C34": "Neoplasia maligna dos brônquios e pulmões",
-    "I63": "Infarto cerebral",
-    "K80": "Colelitíase",
-    "J15": "Pneumonia bacteriana não classificada em outra parte",
-    "A15": "Tuberculose respiratória, com confirmação bacteriológica e histológica",
+AIH_COLUMNS: Tuple[str, ...] = (
+    "ano_cmpt",
+    "mes_cmpt",
+    "dt_inter",
+    "dt_saida",
+    "cep",
+    "munic_res",
+    "munic_mov",
+    "cgc_hosp",
+    "cnes",
+    "nasc",
+    "sexo",
+    "idade",
+    "cod_idade",
+    "nacional",
+    "instru",
+    "raca_cor",
+    "etnia",
+    "cbor",
+    "morte",
+    "uti_mes_to",
+    "marca_uti",
+    "val_uti",
+    "proc_solic",
+    "proc_rea",
+    "val_sh",
+    "val_sp",
+    "n_aih",
+    "val_tot",
+    "infehosp",
+    "ind_vdrl",
+    "diag_princ",
+    "diag_secun",
+    "diagsec1",
+    "diagsec2",
+    "diagsec3",
+    "diagsec4",
+    "diagsec5",
+    "diagsec6",
+    "diagsec7",
+    "diagsec8",
+    "diagsec9",
+    "cid_morte",
+)
+
+DEFAULT_ORDER_BY = ("ano_cmpt", "mes_cmpt", "dt_inter", "dt_saida", "n_aih")
+
+IBGE_UF_PREFIX_TO_SIGLA = {
+    "11": "RO",
+    "12": "AC",
+    "13": "AM",
+    "14": "RR",
+    "15": "PA",
+    "16": "AP",
+    "17": "TO",
+    "21": "MA",
+    "22": "PI",
+    "23": "CE",
+    "24": "RN",
+    "25": "PB",
+    "26": "PE",
+    "27": "AL",
+    "28": "SE",
+    "29": "BA",
+    "31": "MG",
+    "32": "ES",
+    "33": "RJ",
+    "35": "SP",
+    "41": "PR",
+    "42": "SC",
+    "43": "RS",
+    "50": "MS",
+    "51": "MT",
+    "52": "GO",
+    "53": "DF",
 }
 
-FAIXAS_ETARIAS = [
-    "0-4", "5-9", "10-14", "15-19", "20-29",
-    "30-39", "40-49", "50-59", "60-69", "70-79", "80+"
-]
-
-SEXOS = ["M", "F"]
-
-CARATERES_INTERNACAO = [
-    "ELETIVA", "URGENCIA", "ACIDENTE_TRABALHO", "ACIDENTE_TRANSITO"
-]
+IDENTIFIER_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
 
 
-def gerar_internacao():
-    """Gera um registro sintético de internação hospitalar SUS."""
-    cid_codigo = random.choice(list(CIDS.keys()))
-    uf = random.choice(UFS)
-    faixa = random.choice(FAIXAS_ETARIAS)
-    sexo = random.choice(SEXOS)
-
-    # Datas de internação e alta
-    data_internacao = datetime.now() - timedelta(
-        days=random.randint(0, 30),
-        hours=random.randint(0, 23)
-    )
-    dias_permanencia = random.randint(1, 30)
-    data_alta = data_internacao + timedelta(days=dias_permanencia)
-
-    # Valor da AIH (Autorização de Internação Hospitalar)
-    valor_aih = round(random.uniform(200.0, 15000.0), 2)
-
-    # Óbito (probabilidade de ~5%)
-    obito = random.random() < 0.05
-
-    return {
-        "id": str(uuid.uuid4()),
-        "timestamp": datetime.now().isoformat(),
-        "uf": uf,
-        "municipio_codigo": f"{random.randint(100000, 999999)}",
-        "cnes": f"{random.randint(1000000, 9999999)}",  # Código do estabelecimento
-        "cid_principal": cid_codigo,
-        "cid_descricao": CIDS[cid_codigo],
-        "sexo": sexo,
-        "faixa_etaria": faixa,
-        "idade": _idade_por_faixa(faixa),
-        "carater_internacao": random.choice(CARATERES_INTERNACAO),
-        "data_internacao": data_internacao.strftime("%Y-%m-%d %H:%M:%S"),
-        "data_alta": data_alta.strftime("%Y-%m-%d %H:%M:%S"),
-        "dias_permanencia": dias_permanencia,
-        "valor_aih": valor_aih,
-        "obito": obito,
-        "uti": random.random() < 0.15,  # 15% chance UTI
-        "procedimento_principal": f"0{random.randint(1,4)}0{random.randint(1,9)}0{random.randint(10,99)}0{random.randint(10,99)}",
-    }
-
-
-def _idade_por_faixa(faixa: str) -> int:
-    """Retorna uma idade aleatória dentro da faixa etária."""
-    ranges = {
-        "0-4": (0, 4), "5-9": (5, 9), "10-14": (10, 14),
-        "15-19": (15, 19), "20-29": (20, 29), "30-39": (30, 39),
-        "40-49": (40, 49), "50-59": (50, 59), "60-69": (60, 69),
-        "70-79": (70, 79), "80+": (80, 99)
-    }
-    r = ranges.get(faixa, (0, 99))
-    return random.randint(r[0], r[1])
+def json_default(value: Any) -> Any:
+    """Serializa tipos vindos do banco que o json padrao nao conhece."""
+    if isinstance(value, Decimal):
+        return float(value)
+    if isinstance(value, datetime):
+        return value.isoformat()
+    raise TypeError(f"Tipo nao serializavel em JSON: {type(value)!r}")
 
 
 def criar_producer(bootstrap_server: str, max_retries: int = 30) -> KafkaProducer:
-    """Cria o KafkaProducer com retry automático."""
+    """Cria o KafkaProducer com retry automatico."""
     for attempt in range(1, max_retries + 1):
         try:
             producer = KafkaProducer(
                 bootstrap_servers=[bootstrap_server],
-                value_serializer=lambda v: json.dumps(v, ensure_ascii=False).encode("utf-8"),
+                value_serializer=lambda v: json.dumps(
+                    v,
+                    ensure_ascii=False,
+                    default=json_default,
+                ).encode("utf-8"),
                 key_serializer=lambda k: k.encode("utf-8") if k else None,
                 acks="all",
                 retries=3,
@@ -127,67 +137,481 @@ def criar_producer(bootstrap_server: str, max_retries: int = 30) -> KafkaProduce
                 batch_size=16384,
                 compression_type="gzip",
             )
-            print(f"✅ Conectado ao Kafka em {bootstrap_server}")
+            print(f"Conectado ao Kafka em {bootstrap_server}")
             return producer
         except NoBrokersAvailable:
-            print(f"⏳ Tentativa {attempt}/{max_retries} - Kafka não disponível. Aguardando 5s...")
+            print(f"Tentativa {attempt}/{max_retries} - Kafka indisponivel. Aguardando 5s...")
             time.sleep(5)
 
-    raise RuntimeError(f"❌ Não foi possível conectar ao Kafka após {max_retries} tentativas")
+    raise RuntimeError(f"Nao foi possivel conectar ao Kafka apos {max_retries} tentativas")
 
 
-def main():
-    parser = argparse.ArgumentParser(description="Produtor Kafka - Dados DATASUS")
+def criar_conexao_postgres(args: argparse.Namespace):
+    """Abre conexao com PostgreSQL usando psycopg2 apenas quando necessario."""
+    try:
+        import psycopg2
+    except ImportError as exc:
+        raise RuntimeError(
+            "Dependencia ausente: instale psycopg2-binary no ambiente do producer."
+        ) from exc
+
+    if args.db_dsn:
+        return psycopg2.connect(args.db_dsn)
+
+    return psycopg2.connect(
+        host=args.db_host,
+        port=args.db_port,
+        dbname=args.db_name,
+        user=args.db_user,
+        password=args.db_password,
+        connect_timeout=args.db_connect_timeout,
+    )
+
+
+def validar_identificador(valor: str, nome: str) -> str:
+    if not IDENTIFIER_RE.fullmatch(valor):
+        raise ValueError(f"{nome} invalido para SQL identifier: {valor!r}")
+    return valor
+
+
+def quote_identifier(valor: str) -> str:
+    validar_identificador(valor, "identifier")
+    return f'"{valor}"'
+
+
+def tabela_qualificada(schema: str, table: str) -> str:
+    return f"{quote_identifier(schema)}.{quote_identifier(table)}"
+
+
+def montar_order_by(order_by: str) -> str:
+    itens = [item.strip() for item in order_by.split(",") if item.strip()]
+    if not itens:
+        itens = list(DEFAULT_ORDER_BY)
+
+    expressoes = []
+    for item in itens:
+        direcao = "ASC"
+        coluna = item
+        if item.startswith("-"):
+            coluna = item[1:].strip()
+            direcao = "DESC"
+        if coluna not in AIH_COLUMNS:
+            raise ValueError(
+                f"Coluna invalida em --order-by: {coluna!r}. "
+                f"Use uma das colunas do DDL."
+            )
+        expressoes.append(f"{quote_identifier(coluna)} {direcao} NULLS LAST")
+
+    return ", ".join(expressoes)
+
+
+def montar_query_aih(args: argparse.Namespace) -> Tuple[str, List[Any]]:
+    colunas = ", ".join(quote_identifier(coluna) for coluna in AIH_COLUMNS)
+    query = f"SELECT {colunas} FROM {tabela_qualificada(args.db_schema, args.db_table)}"
+    filtros: List[str] = []
+    params: List[Any] = []
+
+    if args.start_year is not None:
+        filtros.append(f"{quote_identifier('ano_cmpt')} >= %s")
+        params.append(args.start_year)
+    if args.end_year is not None:
+        filtros.append(f"{quote_identifier('ano_cmpt')} <= %s")
+        params.append(args.end_year)
+    if args.start_dt_inter:
+        filtros.append(f"{quote_identifier('dt_inter')} >= %s")
+        params.append(args.start_dt_inter)
+    if args.end_dt_inter:
+        filtros.append(f"{quote_identifier('dt_inter')} <= %s")
+        params.append(args.end_dt_inter)
+
+    if filtros:
+        query += " WHERE " + " AND ".join(filtros)
+
+    query += " ORDER BY " + montar_order_by(args.order_by)
+
+    if args.limit > 0:
+        query += " LIMIT %s"
+        params.append(args.limit)
+
+    return query, params
+
+
+def normalizar_texto(valor: Any) -> Optional[str]:
+    if valor is None:
+        return None
+    texto = str(valor).strip()
+    return texto or None
+
+
+def to_int(valor: Any) -> Optional[int]:
+    if valor is None:
+        return None
+    try:
+        return int(valor)
+    except (TypeError, ValueError):
+        return None
+
+
+def to_float(valor: Any) -> float:
+    if valor is None:
+        return 0.0
+    try:
+        return float(valor)
+    except (TypeError, ValueError):
+        return 0.0
+
+
+def parse_data_datasus(valor: Any) -> Optional[datetime]:
+    texto = normalizar_texto(valor)
+    if not texto or len(texto) != 8 or not texto.isdigit() or texto == "00000000":
+        return None
+    try:
+        return datetime.strptime(texto, "%Y%m%d")
+    except ValueError:
+        return None
+
+
+def formatar_data_evento(valor: Any) -> Optional[str]:
+    data = parse_data_datasus(valor)
+    if data is None:
+        return None
+    return data.strftime("%Y-%m-%d 00:00:00")
+
+
+def calcular_dias_permanencia(row: Dict[str, Any]) -> int:
+    entrada = parse_data_datasus(row.get("dt_inter"))
+    saida = parse_data_datasus(row.get("dt_saida"))
+    if entrada is None or saida is None:
+        return 0
+    return max((saida - entrada).days, 0)
+
+
+def inferir_uf(row: Dict[str, Any]) -> Optional[str]:
+    for campo in ("munic_res", "munic_mov"):
+        municipio = normalizar_texto(row.get(campo))
+        if municipio and len(municipio) >= 2:
+            uf = IBGE_UF_PREFIX_TO_SIGLA.get(municipio[:2])
+            if uf:
+                return uf
+    return None
+
+
+def normalizar_sexo(valor: Any) -> Optional[str]:
+    codigo = to_int(valor)
+    if codigo == 1:
+        return "M"
+    if codigo in (2, 3):
+        return "F"
+    return None
+
+
+def idade_em_anos(row: Dict[str, Any]) -> Optional[int]:
+    idade = to_int(row.get("idade"))
+    cod_idade = to_int(row.get("cod_idade"))
+
+    if idade is None:
+        return None
+    if cod_idade in (2, 3):
+        return 0
+    if cod_idade == 5:
+        return max(idade, 100)
+    return idade
+
+
+def faixa_etaria(idade: Optional[int]) -> Optional[str]:
+    if idade is None:
+        return None
+    if idade <= 4:
+        return "0-4"
+    if idade <= 9:
+        return "5-9"
+    if idade <= 14:
+        return "10-14"
+    if idade <= 19:
+        return "15-19"
+    if idade <= 29:
+        return "20-29"
+    if idade <= 39:
+        return "30-39"
+    if idade <= 49:
+        return "40-49"
+    if idade <= 59:
+        return "50-59"
+    if idade <= 69:
+        return "60-69"
+    if idade <= 79:
+        return "70-79"
+    return "80+"
+
+
+def tem_uti(row: Dict[str, Any]) -> bool:
+    return (
+        (to_int(row.get("uti_mes_to")) or 0) > 0
+        or (to_int(row.get("marca_uti")) or 0) > 0
+        or to_float(row.get("val_uti")) > 0
+    )
+
+
+def linha_serializavel(row: Dict[str, Any]) -> Dict[str, Any]:
+    serializada = {}
+    for coluna in AIH_COLUMNS:
+        valor = row.get(coluna)
+        if isinstance(valor, Decimal):
+            serializada[coluna] = float(valor)
+        else:
+            serializada[coluna] = valor
+    return serializada
+
+
+def gerar_id_estavel(row: Dict[str, Any]) -> str:
+    payload = json.dumps(
+        linha_serializavel(row),
+        sort_keys=True,
+        ensure_ascii=False,
+        default=json_default,
+    )
+    return hashlib.sha1(payload.encode("utf-8")).hexdigest()
+
+
+def transformar_aih_em_evento(
+    row: Dict[str, Any],
+    *,
+    sequence: int,
+    cycle: int,
+    source_table: str,
+) -> Dict[str, Any]:
+    idade = idade_em_anos(row)
+    procedimento = normalizar_texto(row.get("proc_rea")) or normalizar_texto(row.get("proc_solic"))
+    emitido_em = datetime.utcnow().isoformat(timespec="seconds")
+
+    return {
+        "id": gerar_id_estavel(row),
+        "timestamp": emitido_em,
+        "uf": inferir_uf(row),
+        "municipio_codigo": normalizar_texto(row.get("munic_res"))
+        or normalizar_texto(row.get("munic_mov")),
+        "cnes": normalizar_texto(row.get("cnes")),
+        "cid_principal": normalizar_texto(row.get("diag_princ")),
+        "cid_descricao": None,
+        "sexo": normalizar_sexo(row.get("sexo")),
+        "faixa_etaria": faixa_etaria(idade),
+        "idade": idade,
+        "carater_internacao": None,
+        "data_internacao": formatar_data_evento(row.get("dt_inter")),
+        "data_alta": formatar_data_evento(row.get("dt_saida")),
+        "dias_permanencia": calcular_dias_permanencia(row),
+        "valor_aih": to_float(row.get("val_tot")),
+        "obito": to_int(row.get("morte")) == 1,
+        "uti": tem_uti(row),
+        "procedimento_principal": procedimento,
+        "source_table": source_table,
+        "replay_sequence": sequence,
+        "replay_cycle": cycle,
+        "raw_aih": linha_serializavel(row),
+    }
+
+
+def buscar_lote(cursor, batch_size: int) -> List[Dict[str, Any]]:
+    rows = cursor.fetchmany(batch_size)
+    return [dict(row) for row in rows]
+
+
+def resumo_datas(rows: Sequence[Dict[str, Any]]) -> str:
+    datas = [normalizar_texto(row.get("dt_inter")) for row in rows if row.get("dt_inter")]
+    if not datas:
+        return "dt_inter sem valor"
+    return f"dt_inter {min(datas)}..{max(datas)}"
+
+
+def validar_datas_args(args: argparse.Namespace) -> None:
+    for nome in ("start_dt_inter", "end_dt_inter"):
+        valor = getattr(args, nome)
+        if valor and (len(valor) != 8 or not valor.isdigit()):
+            raise ValueError(f"--{nome.replace('_', '-')} deve estar no formato AAAAMMDD")
+
+
+def criar_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(description="Produtor Kafka - Data Replay DATASUS AIH")
+
     parser.add_argument("--bootstrap-server", default="kafka:9092", help="Kafka bootstrap server")
-    parser.add_argument("--topic", default="datasus-internacoes", help="Tópico Kafka")
-    parser.add_argument("--interval", type=float, default=1.0, help="Intervalo entre lotes (segundos)")
+    parser.add_argument("--topic", default="datasus-internacoes", help="Topico Kafka")
+    parser.add_argument("--interval", type=float, default=1.0, help="Pausa entre lotes do replay (segundos)")
     parser.add_argument("--batch-size", type=int, default=10, help="Mensagens por lote")
-    parser.add_argument("--total", type=int, default=0, help="Total de mensagens (0 = infinito)")
+    parser.add_argument("--total", type=int, default=0, help="Total de mensagens a emitir (0 = toda a selecao)")
+    parser.add_argument("--dry-run", action="store_true", help="Le do banco e transforma, mas nao envia ao Kafka")
+    parser.add_argument("--print-events", action="store_true", help="Imprime cada evento JSON gerado")
+
+    parser.add_argument("--db-dsn", default=os.getenv("POSTGRES_DSN"), help="DSN PostgreSQL completo")
+    parser.add_argument("--db-host", default=os.getenv("POSTGRES_HOST", "postgres"), help="Host PostgreSQL")
+    parser.add_argument("--db-port", type=int, default=int(os.getenv("POSTGRES_PORT", "5432")), help="Porta PostgreSQL")
+    parser.add_argument("--db-name", default=os.getenv("POSTGRES_DB", "datasus"), help="Database PostgreSQL")
+    parser.add_argument("--db-user", default=os.getenv("POSTGRES_USER", "postgres"), help="Usuario PostgreSQL")
+    parser.add_argument("--db-password", default=os.getenv("POSTGRES_PASSWORD"), help="Senha PostgreSQL")
+    parser.add_argument("--db-schema", default=os.getenv("POSTGRES_SCHEMA", "public"), help="Schema da tabela AIH")
+    parser.add_argument("--db-table", default=os.getenv("POSTGRES_TABLE", "aih"), help="Tabela AIH")
+    parser.add_argument(
+        "--db-connect-timeout",
+        type=int,
+        default=int(os.getenv("POSTGRES_CONNECT_TIMEOUT", "10")),
+        help="Timeout de conexao PostgreSQL em segundos",
+    )
+
+    parser.add_argument("--start-year", type=int, help="Filtra ano_cmpt >= valor")
+    parser.add_argument("--end-year", type=int, help="Filtra ano_cmpt <= valor")
+    parser.add_argument("--start-dt-inter", help="Filtra dt_inter >= AAAAMMDD")
+    parser.add_argument("--end-dt-inter", help="Filtra dt_inter <= AAAAMMDD")
+    parser.add_argument("--limit", type=int, default=0, help="Limite SQL por ciclo de replay (0 = sem limite)")
+    parser.add_argument(
+        "--order-by",
+        default=",".join(DEFAULT_ORDER_BY),
+        help="Colunas do DDL para ordenacao, separadas por virgula. Prefixe com '-' para DESC.",
+    )
+    parser.add_argument("--fetch-size", type=int, default=1000, help="Tamanho do fetch server-side no PostgreSQL")
+    parser.add_argument("--loop", action="store_true", help="Ao chegar ao fim da selecao, reinicia o replay")
+    parser.add_argument(
+        "--loop-sleep",
+        type=float,
+        default=5.0,
+        help="Pausa antes de reiniciar quando --loop estiver ativo",
+    )
+
+    return parser
+
+
+def enviar_lote(
+    *,
+    producer: Optional[KafkaProducer],
+    topic: str,
+    rows: Sequence[Dict[str, Any]],
+    sequence_start: int,
+    cycle: int,
+    source_table: str,
+    dry_run: bool,
+    print_events: bool,
+) -> int:
+    enviadas = 0
+    for row in rows:
+        sequence = sequence_start + enviadas + 1
+        evento = transformar_aih_em_evento(
+            row,
+            sequence=sequence,
+            cycle=cycle,
+            source_table=source_table,
+        )
+
+        if print_events:
+            print(json.dumps(evento, ensure_ascii=False, default=json_default))
+
+        if not dry_run and producer is not None:
+            producer.send(topic, key=evento["uf"], value=evento)
+
+        enviadas += 1
+
+    if not dry_run and producer is not None:
+        producer.flush()
+
+    return enviadas
+
+
+def main() -> None:
+    parser = criar_parser()
     args = parser.parse_args()
+    validar_datas_args(args)
+    validar_identificador(args.db_schema, "--db-schema")
+    validar_identificador(args.db_table, "--db-table")
+
+    if args.batch_size <= 0:
+        raise ValueError("--batch-size deve ser maior que zero")
+    if args.fetch_size <= 0:
+        raise ValueError("--fetch-size deve ser maior que zero")
+    if args.total < 0:
+        raise ValueError("--total nao pode ser negativo")
+
+    source_table = f"{args.db_schema}.{args.db_table}"
+    query, params = montar_query_aih(args)
 
     print("=" * 60)
-    print("PRODUTOR KAFKA - DATASUS (Internações Hospitalares)")
+    print("PRODUTOR KAFKA - DATA REPLAY DATASUS AIH")
     print("=" * 60)
-    print(f"  Broker:     {args.bootstrap_server}")
-    print(f"  Tópico:     {args.topic}")
-    print(f"  Intervalo:  {args.interval}s")
-    print(f"  Batch size: {args.batch_size}")
-    print(f"  Total:      {'infinito' if args.total == 0 else args.total}")
+    print(f"  Broker:       {args.bootstrap_server}")
+    print(f"  Topico:       {args.topic}")
+    print(f"  Fonte:        PostgreSQL {source_table}")
+    print(f"  Intervalo:    {args.interval}s")
+    print(f"  Batch size:   {args.batch_size}")
+    print(f"  Total:        {'toda a selecao' if args.total == 0 else args.total}")
+    print(f"  Loop:         {'sim' if args.loop else 'nao'}")
+    print(f"  Dry run:      {'sim' if args.dry_run else 'nao'}")
     print("=" * 60)
 
-    producer = criar_producer(args.bootstrap_server)
+    producer = None if args.dry_run else criar_producer(args.bootstrap_server)
     total_enviadas = 0
+    cycle = 0
 
     try:
         while True:
-            for _ in range(args.batch_size):
-                internacao = gerar_internacao()
+            cycle += 1
+            print(f"Iniciando ciclo de replay {cycle}: {query} | params={params}")
 
-                # Usa UF como chave de partição (garante que mesma UF sempre vai pra mesma partição)
-                producer.send(
-                    args.topic,
-                    key=internacao["uf"],
-                    value=internacao,
-                )
-                total_enviadas += 1
+            conn = criar_conexao_postgres(args)
+            conn.autocommit = False
+            try:
+                from psycopg2.extras import RealDictCursor
 
-            producer.flush()
-            print(
-                f"📤 [{datetime.now().strftime('%H:%M:%S')}] "
-                f"Enviadas: {total_enviadas} mensagens | "
-                f"Último lote: {args.batch_size} registros"
-            )
+                cursor_name = f"aih_replay_{os.getpid()}_{cycle}"
+                cursor = conn.cursor(name=cursor_name, cursor_factory=RealDictCursor)
+                cursor.itersize = args.fetch_size
+                cursor.execute(query, params)
 
-            if args.total > 0 and total_enviadas >= args.total:
-                print(f"\n✅ Total de {args.total} mensagens atingido. Encerrando.")
-                break
+                while True:
+                    lote = buscar_lote(cursor, args.batch_size)
+                    if not lote:
+                        break
 
-            time.sleep(args.interval)
+                    if args.total > 0:
+                        restante = args.total - total_enviadas
+                        if restante <= 0:
+                            break
+                        lote = lote[:restante]
+
+                    enviadas = enviar_lote(
+                        producer=producer,
+                        topic=args.topic,
+                        rows=lote,
+                        sequence_start=total_enviadas,
+                        cycle=cycle,
+                        source_table=source_table,
+                        dry_run=args.dry_run,
+                        print_events=args.print_events,
+                    )
+                    total_enviadas += enviadas
+
+                    modo = "Lidas" if args.dry_run else "Enviadas"
+                    print(
+                        f"[{datetime.now().strftime('%H:%M:%S')}] "
+                        f"{modo}: {total_enviadas} mensagens | "
+                        f"Ultimo lote: {enviadas} registros | {resumo_datas(lote)}"
+                    )
+
+                    if args.total > 0 and total_enviadas >= args.total:
+                        print(f"Total de {args.total} mensagens atingido. Encerrando.")
+                        return
+
+                    time.sleep(args.interval)
+            finally:
+                conn.close()
+
+            if not args.loop:
+                print("Fim da selecao PostgreSQL. Replay concluido.")
+                return
+
+            print(f"Fim da selecao. Reiniciando em {args.loop_sleep}s por causa de --loop.")
+            time.sleep(args.loop_sleep)
 
     except KeyboardInterrupt:
-        print(f"\n⛔ Interrompido pelo usuário. Total enviadas: {total_enviadas}")
+        print(f"Interrompido pelo usuario. Total processado: {total_enviadas}")
     finally:
-        producer.close()
+        if producer is not None:
+            producer.close()
         print("Producer encerrado.")
 
 

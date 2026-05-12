@@ -97,14 +97,22 @@ watch docker compose ps
 ### Passo 1: Injetar dados (Produtor Kafka)
 
 ```bash
-# Instalar dependências no container Spark
-docker compose exec spark-master pip install kafka-python cassandra-driver
+# Instalar dependencias Python no container Spark
+docker compose exec spark-master pip install -r /opt/spark-apps/requirements.txt cassandra-driver
 
-# Rodar o produtor (envia dados sintéticos DATASUS)
-docker compose exec spark-master python /opt/spark-apps/producer.py \
+# Rodar o produtor em modo data replay a partir da tabela PostgreSQL public.aih
+# Use host.docker.internal se o PostgreSQL estiver rodando no host da maquina.
+docker compose exec -e POSTGRES_PASSWORD='<senha>' spark-master python /opt/spark-apps/producer.py \
     --bootstrap-server kafka:9092 \
+    --db-host host.docker.internal \
+    --db-port 5432 \
+    --db-name datasus \
+    --db-user postgres \
+    --db-schema public \
+    --db-table aih \
     --batch-size 10 \
-    --interval 1.0
+    --interval 1.0 \
+    --loop
 ```
 
 ### Passo 2: Consumir Kafka → HDFS (Master Dataset)
@@ -166,7 +174,7 @@ docker compose exec spark-master spark-submit \
 │   ├── provisioning/           # Auto-config datasources + dashboards
 │   └── dashboards/             # Dashboard pré-configurado
 ├── app/
-│   ├── producer.py             # Produtor Kafka (dados DATASUS)
+│   ├── producer.py             # Produtor Kafka (data replay da tabela public.aih)
 │   ├── kafka_to_hdfs.py        # Consumidor Kafka → HDFS
 │   ├── speed_layer.py          # Spark Structured Streaming
 │   ├── batch_layer.py          # Spark Batch Processing

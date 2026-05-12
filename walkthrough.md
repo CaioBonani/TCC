@@ -18,26 +18,32 @@ watch docker compose ps
 
 ## 2. Preparar Dependências
 
-O container do Spark precisa dos pacotes Python para se conectar ao Kafka e ao Cassandra:
+O container do Spark precisa dos pacotes Python para se conectar ao Kafka, ao Cassandra e ao PostgreSQL:
 
 ```bash
-docker compose exec spark-master pip install kafka-python cassandra-driver
+docker compose exec spark-master pip install -r /opt/spark-apps/requirements.txt
 ```
 
 ---
 
 ## 3. Iniciar a Ingestão de Dados (Producer)
-Abra um terminal dedicado para o **Produtor**. Ele simulará a chegada contínua de novas internações no DATASUS enviando json para o Kafka.
+Abra um terminal dedicado para o **Produtor**. Ele le a tabela real `public.aih` no PostgreSQL e faz um data replay em "conta-gotas", enviando lotes pequenos para o Kafka como se fossem eventos chegando em tempo real.
 
 ```bash
 # Deixe este terminal aberto rodando:
-docker compose exec spark-master python3 /opt/spark-apps/producer.py \
+docker compose exec -e POSTGRES_PASSWORD='<senha>' spark-master python3 /opt/spark-apps/producer.py \
     --bootstrap-server kafka:9092 \
+    --db-host host.docker.internal \
+    --db-port 5432 \
+    --db-name datasus \
+    --db-user postgres \
+    --db-schema public \
+    --db-table aih \
     --batch-size 20 \
     --interval 1.0 \
-    --total 0
+    --loop
 ```
-*(Ele continuará enviando dados inifinitamente)*
+Use `--start-year`, `--end-year`, `--start-dt-inter` e `--end-dt-inter` para recortar o replay. Use `--total N` para encerrar depois de N mensagens; sem `--loop`, o producer para ao fim da selecao.
 
 ---
 

@@ -1,0 +1,1940 @@
+[
+  {
+    "variavel": "ANO_CMPT",
+    "tipo": "char",
+    "tamanho": "4",
+    "descricao": "Ano de processamento da AIH (Autorização de Internação Hospitalar)",
+    "definicao": "AAAA",
+    "valores_permitidos_intervalo": "2014 - 9999",
+    "permite_nulo": "n",
+    "observacoes": "",
+    "valores_permitidos_codigos_raw": "",
+    "valores_permitidos_codigos": []
+  },
+  {
+    "variavel": "MES_CMPT",
+    "tipo": "char",
+    "tamanho": "2",
+    "descricao": "Mês de processamento da AIH",
+    "definicao": "MM",
+    "valores_permitidos_intervalo": "01 - 12",
+    "permite_nulo": "n",
+    "observacoes": "",
+    "valores_permitidos_codigos_raw": "",
+    "valores_permitidos_codigos": []
+  },
+  {
+    "variavel": "DT_INTER",
+    "tipo": "char",
+    "tamanho": "8",
+    "descricao": "Data de internação",
+    "definicao": "AAAAMMDD",
+    "valores_permitidos_intervalo": "20140101 - 99991230",
+    "permite_nulo": "n",
+    "observacoes": "",
+    "valores_permitidos_codigos_raw": "",
+    "valores_permitidos_codigos": []
+  },
+  {
+    "variavel": "DT_SAIDA",
+    "tipo": "char",
+    "tamanho": "8",
+    "descricao": "Data de saída",
+    "definicao": "AAAAMMDD",
+    "valores_permitidos_intervalo": "20140101 - 99991230",
+    "permite_nulo": "n",
+    "observacoes": "",
+    "valores_permitidos_codigos_raw": "",
+    "valores_permitidos_codigos": []
+  },
+  {
+    "variavel": "CEP",
+    "tipo": "char",
+    "tamanho": "8",
+    "descricao": "CEP do Paciente",
+    "definicao": "########",
+    "valores_permitidos_intervalo": "00000000 - 99999999",
+    "permite_nulo": "n",
+    "observacoes": "",
+    "valores_permitidos_codigos_raw": "",
+    "valores_permitidos_codigos": []
+  },
+  {
+    "variavel": "MUNIC_RES",
+    "tipo": "char",
+    "tamanho": "6",
+    "descricao": "Código do IBGE referente ao município de residência do paciente",
+    "definicao": "######",
+    "valores_permitidos_intervalo": "000001 - 999999",
+    "permite_nulo": "n",
+    "observacoes": "Número do IBGE",
+    "valores_permitidos_codigos_raw": "",
+    "valores_permitidos_codigos": []
+  },
+  {
+    "variavel": "MUNIC_MOV",
+    "tipo": "char",
+    "tamanho": "6",
+    "descricao": "Código do município onde se localiza o hospital",
+    "definicao": "######",
+    "valores_permitidos_intervalo": "000001 - 999999",
+    "permite_nulo": "n",
+    "observacoes": "Número do IBGE",
+    "valores_permitidos_codigos_raw": "",
+    "valores_permitidos_codigos": []
+  },
+  {
+    "variavel": "CGC_HOSP",
+    "tipo": "char",
+    "tamanho": "14",
+    "descricao": "CNPJ do estabelecimento de saúde (hospital)",
+    "definicao": "##############.#",
+    "valores_permitidos_intervalo": "De todos zeros até todos 9",
+    "permite_nulo": "s",
+    "observacoes": "",
+    "valores_permitidos_codigos_raw": "",
+    "valores_permitidos_codigos": []
+  },
+  {
+    "variavel": "CNES",
+    "tipo": "char",
+    "tamanho": "7",
+    "descricao": "Código CNES (Cadastro Nacional de Estabelecimentos de Saúde) do hospital",
+    "definicao": "#######",
+    "valores_permitidos_intervalo": "0000000 - 9999999",
+    "permite_nulo": "n",
+    "observacoes": "",
+    "valores_permitidos_codigos_raw": "",
+    "valores_permitidos_codigos": []
+  },
+  {
+    "variavel": "NASC",
+    "tipo": "char",
+    "tamanho": "8",
+    "descricao": "Data de nascimento do paciente",
+    "definicao": "AAAAMMDD",
+    "valores_permitidos_intervalo": "",
+    "permite_nulo": "n",
+    "observacoes": "",
+    "valores_permitidos_codigos_raw": "",
+    "valores_permitidos_codigos": []
+  },
+  {
+    "variavel": "SEXO",
+    "tipo": "char",
+    "tamanho": "1",
+    "descricao": "Sexo do paciente",
+    "definicao": "#",
+    "valores_permitidos_intervalo": "",
+    "permite_nulo": "n",
+    "observacoes": "",
+    "valores_permitidos_codigos_raw": "1: masculino\n2: feminino\n3: feminino\n0-9: NA",
+    "valores_permitidos_codigos": [
+      {
+        "codigo": "1",
+        "valor": "masculino"
+      },
+      {
+        "codigo": "2",
+        "valor": "feminino"
+      },
+      {
+        "codigo": "3",
+        "valor": "feminino"
+      },
+      {
+        "codigo": "0-9",
+        "valor": "NA"
+      }
+    ]
+  },
+  {
+    "variavel": "IDADE",
+    "tipo": "numeric",
+    "tamanho": "2",
+    "descricao": "Idade, na unidade do campo COD_IDADE",
+    "definicao": "##",
+    "valores_permitidos_intervalo": "",
+    "permite_nulo": "n",
+    "observacoes": "",
+    "valores_permitidos_codigos_raw": "",
+    "valores_permitidos_codigos": []
+  },
+  {
+    "variavel": "COD_IDADE",
+    "tipo": "char",
+    "tamanho": "1",
+    "descricao": "Unidade de medida da idade",
+    "definicao": "#",
+    "valores_permitidos_intervalo": "",
+    "permite_nulo": "n",
+    "observacoes": "",
+    "valores_permitidos_codigos_raw": "0: ignorada\n2: dias\n3: meses\n4: anos\n5: mais de 100 anos",
+    "valores_permitidos_codigos": [
+      {
+        "codigo": "0",
+        "valor": "ignorada"
+      },
+      {
+        "codigo": "2",
+        "valor": "dias"
+      },
+      {
+        "codigo": "3",
+        "valor": "meses"
+      },
+      {
+        "codigo": "4",
+        "valor": "anos"
+      },
+      {
+        "codigo": "5",
+        "valor": "mais de 100 anos"
+      }
+    ]
+  },
+  {
+    "variavel": "NACIONAL",
+    "tipo": "char",
+    "tamanho": "3",
+    "descricao": "Código da nacionalidade do paciente",
+    "definicao": "###",
+    "valores_permitidos_intervalo": "",
+    "permite_nulo": "n",
+    "observacoes": "Fonte dada pelo documento indicado pelo Erico: https://saude.campinas.sp.gov.br/cadastro/nacionalidade.pdf",
+    "valores_permitidos_codigos_raw": "170 : Abissinia\n171 : Acores\n172 : Afar frances\n241 : Afeganistao\n93 : Albania\n30 : Alemanha\n174 : Alto volta\n94 : Andorra\n175 : Angola\n334 : Antartica francesa\n337 : Antartico argentino\n333 : Antartico britanico, territorio\n336 : Antartico chileno\n338 : Antartico noruegues\n28 : Antigua e. dep. barbuda\n29 : Antilhas holandesas\n339 : Apatrida\n242 : Arabia saudita\n176 : Argelia\n21 : Argentina\n347 : Armenia\n289 : Arquipelago de bismark\n175 : Angola\n285 : Arquipelago manahiki\n286 : Arquipelago midway\n33 : Aruba\n175 : Angola\n198 : Ascensao e tristao da cunha,is\n287 : Ashmore e cartier\n288 : Australia\n95 : Austria\n138 : Azerbaijao\n243 : Bahrein\n342 : Bangladesh\n44 : Barbados\n139 : Bashkista\n177 : Bechuanalandia\n31 : Belgica\n46 : Belize\n178 : Benin\n83 : Bermudas\n246 : Bhutan\n244 : Birmania\n22 : Bolivia\n134 : Bosnia herzegovina\n179 : Botsuana\n10 : Brasil\n245 : Brunei\n96 : Bulgaria\n238 : Burkina fasso\n180 : Burundi\n141 : Buryat\n343 : Cabo verde\n181 : Camaroes\n34 : Canada\n142 : Carelia\n247 : Catar\n143 : Cazaquistao\n248 : Ceilao\n182 : Ceuta e melilla\n183 : Chade\n144 : Chechen ingusth\n23 : Chile\n42 : China\n249 : China (taiwan)\n97 : Chipre\n145 : Chuvash\n275 : Cingapura\n26 : Colombia\n40 : Comunidade das bahamas\n54 : Comunidade dominicana\n185 : Congo\n43 : Coreia\n186 : Costa do marfim\n51 : Costa rica\n250 : Coveite\n130 : Croacia\n52 : Cuba\n53 : Curacao\n146 : Dagesta\n187 : Daome\n340 : Dependencia de ross\n98 : Dinamarca\n188 : Djibuti\n99 : Eire\n251 : Emirados arabes unidos\n27 : Equador\n100 : Escocia\n136 : Eslovaquia\n132 : Eslovenia\n35 : Espanha\n129 : Estado da cidade do vaticano\n57 : Estados assoc. das antilhas\n36 : Estados unidos da america (eua)\n147 : Estonia\n190 : Etiopia\n252 : Filipinas\n102 : Finlandia\n37 : Franca\n192 : Gambia\n193 : Gana\n194 : Gaza\n148 : Georgia\n103 : Gibraltar\n149 : Gorno altai\n32 : Gra-bretanha\n59 : Granada\n104 : Grecia\n84 : Groenlandia\n292 : Guam\n61 : Guatemala\n87 : Guiana francesa\n195 : Guine\n344 : Guine bissau\n196 : Guine equatorial\n105 : Holanda\n64 : Honduras\n63 : Honduras britanicas\n253 : Hong-kong\n106 : Hungria\n254 : Iemen\n345 : Iemen do sul\n197 : Ifni\n300 : Ilha johnston e sand\n69 : Ilha milhos\n293 : Ilhas baker\n107 : Ilhas baleares\n199 : Ilhas canarias\n294 : Ilhas cantao e enderburg\n295 : Ilhas carolinas\n297 : Ilhas christmas\n184 : Ilhas comores\n290 : Ilhas cook\n108 : Ilhas cosmoledo (lomores)\n117 : Ilhas de man\n109 : Ilhas do canal\n296 : Ilhas do pacifico\n58 : Ilhas falklands\n101 : Ilhas faroes\n298 : Ilhas gilbert\n60 : Ilhas guadalupe\n299 : Ilhas howland e jarvis\n301 : Ilhas kingman reef\n305 : Ilhas macdonal e heard\n302 : Ilhas macquaire\n67 : Ilhas malvinas\n303 : Ilhas marianas\n304 : Ilhas marshall\n306 : Ilhas niue\n307 : Ilhas norfolk\n315 : Ilhas nova caledonia\n318 : Ilhas novas hebridas\n308 : Ilhas palau\n320 : Ilhas pascoa\n321 : Ilhas pitcairin\n309 : Ilhas salomao\n326 : Ilhas santa cruz\n65 : Ilhas serranas\n310 : Ilhas tokelau\n80 : Ilhas turca\n47 : Ilhas turks e caicos\n82 : Ilhas virgens americanas\n81 : Ilhas virgens britanicas\n311 : Ilhas wake\n332 : Ilhas wallis e futuna\n255 : India\n256 : Indonesia\n110 : Inglaterra\n257 : Ira\n258 : Iraque\n112 : Irlanda\n111 : Irlanda do norte\n113 : Islandia\n259 : Israel\n39 : Italia\n114 : Iugoslavia\n66 : Jamaica\n41 : Japao\n260 : Jordania\n150 : Kabardino balkar\n312 : Kalimatan\n151 : Kalmir\n346 : Kara kalpak\n152 : Karachaevocherkess\n153 : Khakass\n261 : Kmer/camboja\n154 : Komi\n262 : Kuwait\n263 : Laos\n200 : Lesoto\n155 : Letonia\n264 : Libano\n201 : Liberia\n202 : Libia\n115 : Liechtenstein\n156 : Lituania\n116 : Luxemburgo\n265 : Macau\n205 : Madagascar\n203 : Madeira\n266 : Malasia\n204 : Malawi\n267 : Maldivas,is\n206 : Mali\n157 : Mari\n207 : Marrocos\n68 : Martinica\n268 : Mascate\n208 : Mauricio\n209 : Mauritania\n85 : Mexico\n284 : Mianma\n210 : Mocambique\n158 : Moldavia\n118 : Monaco\n269 : Mongolia\n70 : Monte serrat\n137 : Montenegro\n240 : Namibia\n314 : Nauru\n270 : Nepal\n211 : Nguane\n71 : Nicaragua\n213 : Nigeria\n119 : Noruega\n316 : Nova guine\n317 : Nova zelandia\n271 : Oman\n159 : Ossetia setentrional\n121 : Pais de gales\n122 : Paises baixos\n272 : Palestina\n72 : Panama\n73 : Panama(zona do canal)\n214 : Papua nova guine\n273 : Paquistao\n24 : Paraguai\n89 : Peru\n322 : Polinesia francesa\n123 : Polonia\n74 : Porto rico\n45 : Portugal\n215 : Pracas norte africanas\n216 : Protetor do sudoeste africano\n217 : Quenia\n160 : Quirguistao\n75 : Quitasueno\n189 : Republica arabe do egito\n218 : Republica centro africana\n173 : Republica da africa do sul\n140 : Republica da bielorrussia\n133 : Republica da macedonia\n56 : Republica de el salvador\n291 : Republica de fiji\n120 : Republica de malta\n191 : Republica do gabao\n62 : Republica do haiti\n212 : Republica do niger\n55 : Republica dominicana\n88 : Republica guiana\n135 : Republica tcheca\n20 : Reservado\n48 : Reservado\n49 : Reservado\n50 : Reservado\n219 : Reuniao\n220 : Rodesia (zimbabwe)\n124 : Romenia\n76 : Roncador\n221 : Ruanda\n274 : Ruiquiu,is\n348 : Russia\n222 : Saara espanhol\n323 : Sabah\n324 : Samoa americana\n325 : Samoa ocidental\n125 : San marino\n223 : Santa helena\n77 : Santa lucia\n78 : Sao cristovao\n224 : Sao tome e principe\n79 : Sao vicente\n327 : Sarawak\n349 : Senegal\n276 : Sequin\n226 : Serra leoa\n131 : Servia\n225 : Seychelles\n277 : Siria\n227 : Somalia, republica\n278 : Sri-lanka\n86 : St. pierre et miquelon\n228 : Suazilandia\n229 : Sudao\n126 : Suecia\n38 : Suica\n90 : Suriname\n127 : Svalbard e jan mayer,is\n161 : Tadjiquistao\n279 : Tailandia\n230 : Tanganica\n350 : Tanzania\n162 : Tartaria\n128 : Tchecoslovaquia\n335 : Terr. antartico da australia\n341 : Terras austrais\n231 : Territ. britanico do oceano indico\n328 : Territorio de cocos\n319 : Territorio de papua\n329 : Timor\n233 : Togo\n330 : Tonga\n232 : Transkei\n280 : Tregua, estado\n91 : Trinidad e tobago\n234 : Tunisia\n163 : Turcomenistao\n281 : Turquia\n331 : Tuvalu\n164 : Tuvin\n165 : Ucrania\n166 : Udmurt\n235 : Uganda\n167 : Uniao sovietica\n25 : Uruguai\n168 : Uzbequistao\n92 : Venezuela\n282 : Vietna do norte\n283 : Vietna do sul\n169 : Yakut\n236 : Zaire\n237 : Zambia\n239 : Zimbabwe",
+    "valores_permitidos_codigos": [
+      {
+        "codigo": "170",
+        "valor": "Abissinia"
+      },
+      {
+        "codigo": "171",
+        "valor": "Acores"
+      },
+      {
+        "codigo": "172",
+        "valor": "Afar frances"
+      },
+      {
+        "codigo": "241",
+        "valor": "Afeganistao"
+      },
+      {
+        "codigo": "93",
+        "valor": "Albania"
+      },
+      {
+        "codigo": "30",
+        "valor": "Alemanha"
+      },
+      {
+        "codigo": "174",
+        "valor": "Alto volta"
+      },
+      {
+        "codigo": "94",
+        "valor": "Andorra"
+      },
+      {
+        "codigo": "175",
+        "valor": "Angola"
+      },
+      {
+        "codigo": "334",
+        "valor": "Antartica francesa"
+      },
+      {
+        "codigo": "337",
+        "valor": "Antartico argentino"
+      },
+      {
+        "codigo": "333",
+        "valor": "Antartico britanico, territorio"
+      },
+      {
+        "codigo": "336",
+        "valor": "Antartico chileno"
+      },
+      {
+        "codigo": "338",
+        "valor": "Antartico noruegues"
+      },
+      {
+        "codigo": "28",
+        "valor": "Antigua e. dep. barbuda"
+      },
+      {
+        "codigo": "29",
+        "valor": "Antilhas holandesas"
+      },
+      {
+        "codigo": "339",
+        "valor": "Apatrida"
+      },
+      {
+        "codigo": "242",
+        "valor": "Arabia saudita"
+      },
+      {
+        "codigo": "176",
+        "valor": "Argelia"
+      },
+      {
+        "codigo": "21",
+        "valor": "Argentina"
+      },
+      {
+        "codigo": "347",
+        "valor": "Armenia"
+      },
+      {
+        "codigo": "289",
+        "valor": "Arquipelago de bismark"
+      },
+      {
+        "codigo": "175",
+        "valor": "Angola"
+      },
+      {
+        "codigo": "285",
+        "valor": "Arquipelago manahiki"
+      },
+      {
+        "codigo": "286",
+        "valor": "Arquipelago midway"
+      },
+      {
+        "codigo": "33",
+        "valor": "Aruba"
+      },
+      {
+        "codigo": "175",
+        "valor": "Angola"
+      },
+      {
+        "codigo": "198",
+        "valor": "Ascensao e tristao da cunha,is"
+      },
+      {
+        "codigo": "287",
+        "valor": "Ashmore e cartier"
+      },
+      {
+        "codigo": "288",
+        "valor": "Australia"
+      },
+      {
+        "codigo": "95",
+        "valor": "Austria"
+      },
+      {
+        "codigo": "138",
+        "valor": "Azerbaijao"
+      },
+      {
+        "codigo": "243",
+        "valor": "Bahrein"
+      },
+      {
+        "codigo": "342",
+        "valor": "Bangladesh"
+      },
+      {
+        "codigo": "44",
+        "valor": "Barbados"
+      },
+      {
+        "codigo": "139",
+        "valor": "Bashkista"
+      },
+      {
+        "codigo": "177",
+        "valor": "Bechuanalandia"
+      },
+      {
+        "codigo": "31",
+        "valor": "Belgica"
+      },
+      {
+        "codigo": "46",
+        "valor": "Belize"
+      },
+      {
+        "codigo": "178",
+        "valor": "Benin"
+      },
+      {
+        "codigo": "83",
+        "valor": "Bermudas"
+      },
+      {
+        "codigo": "246",
+        "valor": "Bhutan"
+      },
+      {
+        "codigo": "244",
+        "valor": "Birmania"
+      },
+      {
+        "codigo": "22",
+        "valor": "Bolivia"
+      },
+      {
+        "codigo": "134",
+        "valor": "Bosnia herzegovina"
+      },
+      {
+        "codigo": "179",
+        "valor": "Botsuana"
+      },
+      {
+        "codigo": "10",
+        "valor": "Brasil"
+      },
+      {
+        "codigo": "245",
+        "valor": "Brunei"
+      },
+      {
+        "codigo": "96",
+        "valor": "Bulgaria"
+      },
+      {
+        "codigo": "238",
+        "valor": "Burkina fasso"
+      },
+      {
+        "codigo": "180",
+        "valor": "Burundi"
+      },
+      {
+        "codigo": "141",
+        "valor": "Buryat"
+      },
+      {
+        "codigo": "343",
+        "valor": "Cabo verde"
+      },
+      {
+        "codigo": "181",
+        "valor": "Camaroes"
+      },
+      {
+        "codigo": "34",
+        "valor": "Canada"
+      },
+      {
+        "codigo": "142",
+        "valor": "Carelia"
+      },
+      {
+        "codigo": "247",
+        "valor": "Catar"
+      },
+      {
+        "codigo": "143",
+        "valor": "Cazaquistao"
+      },
+      {
+        "codigo": "248",
+        "valor": "Ceilao"
+      },
+      {
+        "codigo": "182",
+        "valor": "Ceuta e melilla"
+      },
+      {
+        "codigo": "183",
+        "valor": "Chade"
+      },
+      {
+        "codigo": "144",
+        "valor": "Chechen ingusth"
+      },
+      {
+        "codigo": "23",
+        "valor": "Chile"
+      },
+      {
+        "codigo": "42",
+        "valor": "China"
+      },
+      {
+        "codigo": "249",
+        "valor": "China (taiwan)"
+      },
+      {
+        "codigo": "97",
+        "valor": "Chipre"
+      },
+      {
+        "codigo": "145",
+        "valor": "Chuvash"
+      },
+      {
+        "codigo": "275",
+        "valor": "Cingapura"
+      },
+      {
+        "codigo": "26",
+        "valor": "Colombia"
+      },
+      {
+        "codigo": "40",
+        "valor": "Comunidade das bahamas"
+      },
+      {
+        "codigo": "54",
+        "valor": "Comunidade dominicana"
+      },
+      {
+        "codigo": "185",
+        "valor": "Congo"
+      },
+      {
+        "codigo": "43",
+        "valor": "Coreia"
+      },
+      {
+        "codigo": "186",
+        "valor": "Costa do marfim"
+      },
+      {
+        "codigo": "51",
+        "valor": "Costa rica"
+      },
+      {
+        "codigo": "250",
+        "valor": "Coveite"
+      },
+      {
+        "codigo": "130",
+        "valor": "Croacia"
+      },
+      {
+        "codigo": "52",
+        "valor": "Cuba"
+      },
+      {
+        "codigo": "53",
+        "valor": "Curacao"
+      },
+      {
+        "codigo": "146",
+        "valor": "Dagesta"
+      },
+      {
+        "codigo": "187",
+        "valor": "Daome"
+      },
+      {
+        "codigo": "340",
+        "valor": "Dependencia de ross"
+      },
+      {
+        "codigo": "98",
+        "valor": "Dinamarca"
+      },
+      {
+        "codigo": "188",
+        "valor": "Djibuti"
+      },
+      {
+        "codigo": "99",
+        "valor": "Eire"
+      },
+      {
+        "codigo": "251",
+        "valor": "Emirados arabes unidos"
+      },
+      {
+        "codigo": "27",
+        "valor": "Equador"
+      },
+      {
+        "codigo": "100",
+        "valor": "Escocia"
+      },
+      {
+        "codigo": "136",
+        "valor": "Eslovaquia"
+      },
+      {
+        "codigo": "132",
+        "valor": "Eslovenia"
+      },
+      {
+        "codigo": "35",
+        "valor": "Espanha"
+      },
+      {
+        "codigo": "129",
+        "valor": "Estado da cidade do vaticano"
+      },
+      {
+        "codigo": "57",
+        "valor": "Estados assoc. das antilhas"
+      },
+      {
+        "codigo": "36",
+        "valor": "Estados unidos da america (eua)"
+      },
+      {
+        "codigo": "147",
+        "valor": "Estonia"
+      },
+      {
+        "codigo": "190",
+        "valor": "Etiopia"
+      },
+      {
+        "codigo": "252",
+        "valor": "Filipinas"
+      },
+      {
+        "codigo": "102",
+        "valor": "Finlandia"
+      },
+      {
+        "codigo": "37",
+        "valor": "Franca"
+      },
+      {
+        "codigo": "192",
+        "valor": "Gambia"
+      },
+      {
+        "codigo": "193",
+        "valor": "Gana"
+      },
+      {
+        "codigo": "194",
+        "valor": "Gaza"
+      },
+      {
+        "codigo": "148",
+        "valor": "Georgia"
+      },
+      {
+        "codigo": "103",
+        "valor": "Gibraltar"
+      },
+      {
+        "codigo": "149",
+        "valor": "Gorno altai"
+      },
+      {
+        "codigo": "32",
+        "valor": "Gra-bretanha"
+      },
+      {
+        "codigo": "59",
+        "valor": "Granada"
+      },
+      {
+        "codigo": "104",
+        "valor": "Grecia"
+      },
+      {
+        "codigo": "84",
+        "valor": "Groenlandia"
+      },
+      {
+        "codigo": "292",
+        "valor": "Guam"
+      },
+      {
+        "codigo": "61",
+        "valor": "Guatemala"
+      },
+      {
+        "codigo": "87",
+        "valor": "Guiana francesa"
+      },
+      {
+        "codigo": "195",
+        "valor": "Guine"
+      },
+      {
+        "codigo": "344",
+        "valor": "Guine bissau"
+      },
+      {
+        "codigo": "196",
+        "valor": "Guine equatorial"
+      },
+      {
+        "codigo": "105",
+        "valor": "Holanda"
+      },
+      {
+        "codigo": "64",
+        "valor": "Honduras"
+      },
+      {
+        "codigo": "63",
+        "valor": "Honduras britanicas"
+      },
+      {
+        "codigo": "253",
+        "valor": "Hong-kong"
+      },
+      {
+        "codigo": "106",
+        "valor": "Hungria"
+      },
+      {
+        "codigo": "254",
+        "valor": "Iemen"
+      },
+      {
+        "codigo": "345",
+        "valor": "Iemen do sul"
+      },
+      {
+        "codigo": "197",
+        "valor": "Ifni"
+      },
+      {
+        "codigo": "300",
+        "valor": "Ilha johnston e sand"
+      },
+      {
+        "codigo": "69",
+        "valor": "Ilha milhos"
+      },
+      {
+        "codigo": "293",
+        "valor": "Ilhas baker"
+      },
+      {
+        "codigo": "107",
+        "valor": "Ilhas baleares"
+      },
+      {
+        "codigo": "199",
+        "valor": "Ilhas canarias"
+      },
+      {
+        "codigo": "294",
+        "valor": "Ilhas cantao e enderburg"
+      },
+      {
+        "codigo": "295",
+        "valor": "Ilhas carolinas"
+      },
+      {
+        "codigo": "297",
+        "valor": "Ilhas christmas"
+      },
+      {
+        "codigo": "184",
+        "valor": "Ilhas comores"
+      },
+      {
+        "codigo": "290",
+        "valor": "Ilhas cook"
+      },
+      {
+        "codigo": "108",
+        "valor": "Ilhas cosmoledo (lomores)"
+      },
+      {
+        "codigo": "117",
+        "valor": "Ilhas de man"
+      },
+      {
+        "codigo": "109",
+        "valor": "Ilhas do canal"
+      },
+      {
+        "codigo": "296",
+        "valor": "Ilhas do pacifico"
+      },
+      {
+        "codigo": "58",
+        "valor": "Ilhas falklands"
+      },
+      {
+        "codigo": "101",
+        "valor": "Ilhas faroes"
+      },
+      {
+        "codigo": "298",
+        "valor": "Ilhas gilbert"
+      },
+      {
+        "codigo": "60",
+        "valor": "Ilhas guadalupe"
+      },
+      {
+        "codigo": "299",
+        "valor": "Ilhas howland e jarvis"
+      },
+      {
+        "codigo": "301",
+        "valor": "Ilhas kingman reef"
+      },
+      {
+        "codigo": "305",
+        "valor": "Ilhas macdonal e heard"
+      },
+      {
+        "codigo": "302",
+        "valor": "Ilhas macquaire"
+      },
+      {
+        "codigo": "67",
+        "valor": "Ilhas malvinas"
+      },
+      {
+        "codigo": "303",
+        "valor": "Ilhas marianas"
+      },
+      {
+        "codigo": "304",
+        "valor": "Ilhas marshall"
+      },
+      {
+        "codigo": "306",
+        "valor": "Ilhas niue"
+      },
+      {
+        "codigo": "307",
+        "valor": "Ilhas norfolk"
+      },
+      {
+        "codigo": "315",
+        "valor": "Ilhas nova caledonia"
+      },
+      {
+        "codigo": "318",
+        "valor": "Ilhas novas hebridas"
+      },
+      {
+        "codigo": "308",
+        "valor": "Ilhas palau"
+      },
+      {
+        "codigo": "320",
+        "valor": "Ilhas pascoa"
+      },
+      {
+        "codigo": "321",
+        "valor": "Ilhas pitcairin"
+      },
+      {
+        "codigo": "309",
+        "valor": "Ilhas salomao"
+      },
+      {
+        "codigo": "326",
+        "valor": "Ilhas santa cruz"
+      },
+      {
+        "codigo": "65",
+        "valor": "Ilhas serranas"
+      },
+      {
+        "codigo": "310",
+        "valor": "Ilhas tokelau"
+      },
+      {
+        "codigo": "80",
+        "valor": "Ilhas turca"
+      },
+      {
+        "codigo": "47",
+        "valor": "Ilhas turks e caicos"
+      },
+      {
+        "codigo": "82",
+        "valor": "Ilhas virgens americanas"
+      },
+      {
+        "codigo": "81",
+        "valor": "Ilhas virgens britanicas"
+      },
+      {
+        "codigo": "311",
+        "valor": "Ilhas wake"
+      },
+      {
+        "codigo": "332",
+        "valor": "Ilhas wallis e futuna"
+      },
+      {
+        "codigo": "255",
+        "valor": "India"
+      },
+      {
+        "codigo": "256",
+        "valor": "Indonesia"
+      },
+      {
+        "codigo": "110",
+        "valor": "Inglaterra"
+      },
+      {
+        "codigo": "257",
+        "valor": "Ira"
+      },
+      {
+        "codigo": "258",
+        "valor": "Iraque"
+      },
+      {
+        "codigo": "112",
+        "valor": "Irlanda"
+      },
+      {
+        "codigo": "111",
+        "valor": "Irlanda do norte"
+      },
+      {
+        "codigo": "113",
+        "valor": "Islandia"
+      },
+      {
+        "codigo": "259",
+        "valor": "Israel"
+      },
+      {
+        "codigo": "39",
+        "valor": "Italia"
+      },
+      {
+        "codigo": "114",
+        "valor": "Iugoslavia"
+      },
+      {
+        "codigo": "66",
+        "valor": "Jamaica"
+      },
+      {
+        "codigo": "41",
+        "valor": "Japao"
+      },
+      {
+        "codigo": "260",
+        "valor": "Jordania"
+      },
+      {
+        "codigo": "150",
+        "valor": "Kabardino balkar"
+      },
+      {
+        "codigo": "312",
+        "valor": "Kalimatan"
+      },
+      {
+        "codigo": "151",
+        "valor": "Kalmir"
+      },
+      {
+        "codigo": "346",
+        "valor": "Kara kalpak"
+      },
+      {
+        "codigo": "152",
+        "valor": "Karachaevocherkess"
+      },
+      {
+        "codigo": "153",
+        "valor": "Khakass"
+      },
+      {
+        "codigo": "261",
+        "valor": "Kmer/camboja"
+      },
+      {
+        "codigo": "154",
+        "valor": "Komi"
+      },
+      {
+        "codigo": "262",
+        "valor": "Kuwait"
+      },
+      {
+        "codigo": "263",
+        "valor": "Laos"
+      },
+      {
+        "codigo": "200",
+        "valor": "Lesoto"
+      },
+      {
+        "codigo": "155",
+        "valor": "Letonia"
+      },
+      {
+        "codigo": "264",
+        "valor": "Libano"
+      },
+      {
+        "codigo": "201",
+        "valor": "Liberia"
+      },
+      {
+        "codigo": "202",
+        "valor": "Libia"
+      },
+      {
+        "codigo": "115",
+        "valor": "Liechtenstein"
+      },
+      {
+        "codigo": "156",
+        "valor": "Lituania"
+      },
+      {
+        "codigo": "116",
+        "valor": "Luxemburgo"
+      },
+      {
+        "codigo": "265",
+        "valor": "Macau"
+      },
+      {
+        "codigo": "205",
+        "valor": "Madagascar"
+      },
+      {
+        "codigo": "203",
+        "valor": "Madeira"
+      },
+      {
+        "codigo": "266",
+        "valor": "Malasia"
+      },
+      {
+        "codigo": "204",
+        "valor": "Malawi"
+      },
+      {
+        "codigo": "267",
+        "valor": "Maldivas,is"
+      },
+      {
+        "codigo": "206",
+        "valor": "Mali"
+      },
+      {
+        "codigo": "157",
+        "valor": "Mari"
+      },
+      {
+        "codigo": "207",
+        "valor": "Marrocos"
+      },
+      {
+        "codigo": "68",
+        "valor": "Martinica"
+      },
+      {
+        "codigo": "268",
+        "valor": "Mascate"
+      },
+      {
+        "codigo": "208",
+        "valor": "Mauricio"
+      },
+      {
+        "codigo": "209",
+        "valor": "Mauritania"
+      },
+      {
+        "codigo": "85",
+        "valor": "Mexico"
+      },
+      {
+        "codigo": "284",
+        "valor": "Mianma"
+      },
+      {
+        "codigo": "210",
+        "valor": "Mocambique"
+      },
+      {
+        "codigo": "158",
+        "valor": "Moldavia"
+      },
+      {
+        "codigo": "118",
+        "valor": "Monaco"
+      },
+      {
+        "codigo": "269",
+        "valor": "Mongolia"
+      },
+      {
+        "codigo": "70",
+        "valor": "Monte serrat"
+      },
+      {
+        "codigo": "137",
+        "valor": "Montenegro"
+      },
+      {
+        "codigo": "240",
+        "valor": "Namibia"
+      },
+      {
+        "codigo": "314",
+        "valor": "Nauru"
+      },
+      {
+        "codigo": "270",
+        "valor": "Nepal"
+      },
+      {
+        "codigo": "211",
+        "valor": "Nguane"
+      },
+      {
+        "codigo": "71",
+        "valor": "Nicaragua"
+      },
+      {
+        "codigo": "213",
+        "valor": "Nigeria"
+      },
+      {
+        "codigo": "119",
+        "valor": "Noruega"
+      },
+      {
+        "codigo": "316",
+        "valor": "Nova guine"
+      },
+      {
+        "codigo": "317",
+        "valor": "Nova zelandia"
+      },
+      {
+        "codigo": "271",
+        "valor": "Oman"
+      },
+      {
+        "codigo": "159",
+        "valor": "Ossetia setentrional"
+      },
+      {
+        "codigo": "121",
+        "valor": "Pais de gales"
+      },
+      {
+        "codigo": "122",
+        "valor": "Paises baixos"
+      },
+      {
+        "codigo": "272",
+        "valor": "Palestina"
+      },
+      {
+        "codigo": "72",
+        "valor": "Panama"
+      },
+      {
+        "codigo": "73",
+        "valor": "Panama(zona do canal)"
+      },
+      {
+        "codigo": "214",
+        "valor": "Papua nova guine"
+      },
+      {
+        "codigo": "273",
+        "valor": "Paquistao"
+      },
+      {
+        "codigo": "24",
+        "valor": "Paraguai"
+      },
+      {
+        "codigo": "89",
+        "valor": "Peru"
+      },
+      {
+        "codigo": "322",
+        "valor": "Polinesia francesa"
+      },
+      {
+        "codigo": "123",
+        "valor": "Polonia"
+      },
+      {
+        "codigo": "74",
+        "valor": "Porto rico"
+      },
+      {
+        "codigo": "45",
+        "valor": "Portugal"
+      },
+      {
+        "codigo": "215",
+        "valor": "Pracas norte africanas"
+      },
+      {
+        "codigo": "216",
+        "valor": "Protetor do sudoeste africano"
+      },
+      {
+        "codigo": "217",
+        "valor": "Quenia"
+      },
+      {
+        "codigo": "160",
+        "valor": "Quirguistao"
+      },
+      {
+        "codigo": "75",
+        "valor": "Quitasueno"
+      },
+      {
+        "codigo": "189",
+        "valor": "Republica arabe do egito"
+      },
+      {
+        "codigo": "218",
+        "valor": "Republica centro africana"
+      },
+      {
+        "codigo": "173",
+        "valor": "Republica da africa do sul"
+      },
+      {
+        "codigo": "140",
+        "valor": "Republica da bielorrussia"
+      },
+      {
+        "codigo": "133",
+        "valor": "Republica da macedonia"
+      },
+      {
+        "codigo": "56",
+        "valor": "Republica de el salvador"
+      },
+      {
+        "codigo": "291",
+        "valor": "Republica de fiji"
+      },
+      {
+        "codigo": "120",
+        "valor": "Republica de malta"
+      },
+      {
+        "codigo": "191",
+        "valor": "Republica do gabao"
+      },
+      {
+        "codigo": "62",
+        "valor": "Republica do haiti"
+      },
+      {
+        "codigo": "212",
+        "valor": "Republica do niger"
+      },
+      {
+        "codigo": "55",
+        "valor": "Republica dominicana"
+      },
+      {
+        "codigo": "88",
+        "valor": "Republica guiana"
+      },
+      {
+        "codigo": "135",
+        "valor": "Republica tcheca"
+      },
+      {
+        "codigo": "20",
+        "valor": "Reservado"
+      },
+      {
+        "codigo": "48",
+        "valor": "Reservado"
+      },
+      {
+        "codigo": "49",
+        "valor": "Reservado"
+      },
+      {
+        "codigo": "50",
+        "valor": "Reservado"
+      },
+      {
+        "codigo": "219",
+        "valor": "Reuniao"
+      },
+      {
+        "codigo": "220",
+        "valor": "Rodesia (zimbabwe)"
+      },
+      {
+        "codigo": "124",
+        "valor": "Romenia"
+      },
+      {
+        "codigo": "76",
+        "valor": "Roncador"
+      },
+      {
+        "codigo": "221",
+        "valor": "Ruanda"
+      },
+      {
+        "codigo": "274",
+        "valor": "Ruiquiu,is"
+      },
+      {
+        "codigo": "348",
+        "valor": "Russia"
+      },
+      {
+        "codigo": "222",
+        "valor": "Saara espanhol"
+      },
+      {
+        "codigo": "323",
+        "valor": "Sabah"
+      },
+      {
+        "codigo": "324",
+        "valor": "Samoa americana"
+      },
+      {
+        "codigo": "325",
+        "valor": "Samoa ocidental"
+      },
+      {
+        "codigo": "125",
+        "valor": "San marino"
+      },
+      {
+        "codigo": "223",
+        "valor": "Santa helena"
+      },
+      {
+        "codigo": "77",
+        "valor": "Santa lucia"
+      },
+      {
+        "codigo": "78",
+        "valor": "Sao cristovao"
+      },
+      {
+        "codigo": "224",
+        "valor": "Sao tome e principe"
+      },
+      {
+        "codigo": "79",
+        "valor": "Sao vicente"
+      },
+      {
+        "codigo": "327",
+        "valor": "Sarawak"
+      },
+      {
+        "codigo": "349",
+        "valor": "Senegal"
+      },
+      {
+        "codigo": "276",
+        "valor": "Sequin"
+      },
+      {
+        "codigo": "226",
+        "valor": "Serra leoa"
+      },
+      {
+        "codigo": "131",
+        "valor": "Servia"
+      },
+      {
+        "codigo": "225",
+        "valor": "Seychelles"
+      },
+      {
+        "codigo": "277",
+        "valor": "Siria"
+      },
+      {
+        "codigo": "227",
+        "valor": "Somalia, republica"
+      },
+      {
+        "codigo": "278",
+        "valor": "Sri-lanka"
+      },
+      {
+        "codigo": "86",
+        "valor": "St. pierre et miquelon"
+      },
+      {
+        "codigo": "228",
+        "valor": "Suazilandia"
+      },
+      {
+        "codigo": "229",
+        "valor": "Sudao"
+      },
+      {
+        "codigo": "126",
+        "valor": "Suecia"
+      },
+      {
+        "codigo": "38",
+        "valor": "Suica"
+      },
+      {
+        "codigo": "90",
+        "valor": "Suriname"
+      },
+      {
+        "codigo": "127",
+        "valor": "Svalbard e jan mayer,is"
+      },
+      {
+        "codigo": "161",
+        "valor": "Tadjiquistao"
+      },
+      {
+        "codigo": "279",
+        "valor": "Tailandia"
+      },
+      {
+        "codigo": "230",
+        "valor": "Tanganica"
+      },
+      {
+        "codigo": "350",
+        "valor": "Tanzania"
+      },
+      {
+        "codigo": "162",
+        "valor": "Tartaria"
+      },
+      {
+        "codigo": "128",
+        "valor": "Tchecoslovaquia"
+      },
+      {
+        "codigo": "335",
+        "valor": "Terr. antartico da australia"
+      },
+      {
+        "codigo": "341",
+        "valor": "Terras austrais"
+      },
+      {
+        "codigo": "231",
+        "valor": "Territ. britanico do oceano indico"
+      },
+      {
+        "codigo": "328",
+        "valor": "Territorio de cocos"
+      },
+      {
+        "codigo": "319",
+        "valor": "Territorio de papua"
+      },
+      {
+        "codigo": "329",
+        "valor": "Timor"
+      },
+      {
+        "codigo": "233",
+        "valor": "Togo"
+      },
+      {
+        "codigo": "330",
+        "valor": "Tonga"
+      },
+      {
+        "codigo": "232",
+        "valor": "Transkei"
+      },
+      {
+        "codigo": "280",
+        "valor": "Tregua, estado"
+      },
+      {
+        "codigo": "91",
+        "valor": "Trinidad e tobago"
+      },
+      {
+        "codigo": "234",
+        "valor": "Tunisia"
+      },
+      {
+        "codigo": "163",
+        "valor": "Turcomenistao"
+      },
+      {
+        "codigo": "281",
+        "valor": "Turquia"
+      },
+      {
+        "codigo": "331",
+        "valor": "Tuvalu"
+      },
+      {
+        "codigo": "164",
+        "valor": "Tuvin"
+      },
+      {
+        "codigo": "165",
+        "valor": "Ucrania"
+      },
+      {
+        "codigo": "166",
+        "valor": "Udmurt"
+      },
+      {
+        "codigo": "235",
+        "valor": "Uganda"
+      },
+      {
+        "codigo": "167",
+        "valor": "Uniao sovietica"
+      },
+      {
+        "codigo": "25",
+        "valor": "Uruguai"
+      },
+      {
+        "codigo": "168",
+        "valor": "Uzbequistao"
+      },
+      {
+        "codigo": "92",
+        "valor": "Venezuela"
+      },
+      {
+        "codigo": "282",
+        "valor": "Vietna do norte"
+      },
+      {
+        "codigo": "283",
+        "valor": "Vietna do sul"
+      },
+      {
+        "codigo": "169",
+        "valor": "Yakut"
+      },
+      {
+        "codigo": "236",
+        "valor": "Zaire"
+      },
+      {
+        "codigo": "237",
+        "valor": "Zambia"
+      },
+      {
+        "codigo": "239",
+        "valor": "Zimbabwe"
+      }
+    ]
+  },
+  {
+    "variavel": "INSTRU",
+    "tipo": "char",
+    "tamanho": "1",
+    "descricao": "Grau de instrução do paciente",
+    "definicao": "#",
+    "valores_permitidos_intervalo": "",
+    "permite_nulo": "n",
+    "observacoes": "Grande parte dos dados estão zerados",
+    "valores_permitidos_codigos_raw": "1 : Analfabeto\n2 : 1º grau\n3 : 2º grau\n4 : 3º grau\n0;9 : NA",
+    "valores_permitidos_codigos": [
+      {
+        "codigo": "1",
+        "valor": "Analfabeto"
+      },
+      {
+        "codigo": "2",
+        "valor": "1º grau"
+      },
+      {
+        "codigo": "3",
+        "valor": "2º grau"
+      },
+      {
+        "codigo": "4",
+        "valor": "3º grau"
+      },
+      {
+        "codigo": "0",
+        "valor": "NA"
+      },
+      {
+        "codigo": "9",
+        "valor": "NA"
+      }
+    ]
+  },
+  {
+    "variavel": "RACA_COR",
+    "tipo": "char",
+    "tamanho": "2",
+    "descricao": "Raça/cor do paciente",
+    "definicao": "##",
+    "valores_permitidos_intervalo": "",
+    "permite_nulo": "n",
+    "observacoes": "Observação do Quadro 9 (pg. 35): Aproximadamente 30% de dados não preenchidos em média por ano, pois apresenta o código 99 que significa “sem informação”.",
+    "valores_permitidos_codigos_raw": "1 : Branca\n2 : Preta\n3 : Parda\n4 : Amarela\n5 : Indígena\n0;99: NA",
+    "valores_permitidos_codigos": [
+      {
+        "codigo": "1",
+        "valor": "Branca"
+      },
+      {
+        "codigo": "2",
+        "valor": "Preta"
+      },
+      {
+        "codigo": "3",
+        "valor": "Parda"
+      },
+      {
+        "codigo": "4",
+        "valor": "Amarela"
+      },
+      {
+        "codigo": "5",
+        "valor": "Indígena"
+      },
+      {
+        "codigo": "0",
+        "valor": "NA"
+      },
+      {
+        "codigo": "99",
+        "valor": "NA"
+      }
+    ]
+  },
+  {
+    "variavel": "ETNIA",
+    "tipo": "char",
+    "tamanho": "4",
+    "descricao": "Etnia do paciente, se raça/cor for indígena",
+    "definicao": "####",
+    "valores_permitidos_intervalo": "0 a 333\nx265 a x411",
+    "permite_nulo": "s",
+    "observacoes": "Fonte:\nhttps://bvsms.saude.gov.br/bvs/saudelegis/sas/2010/prt0508_28_09_2010.html",
+    "valores_permitidos_codigos_raw": "",
+    "valores_permitidos_codigos": []
+  },
+  {
+    "variavel": "CBOR",
+    "tipo": "char",
+    "tamanho": "3",
+    "descricao": "Ocupação do paciente, segundo a CBO (Classificação Brasileira de Ocupações)",
+    "definicao": "###",
+    "valores_permitidos_intervalo": "",
+    "permite_nulo": "s",
+    "observacoes": "os códigos da CBO possuem valores específicos para cada ocupação.\nFonte: http://www.mtecbo.gov.br/cbosite/pages/downloads.jsf",
+    "valores_permitidos_codigos_raw": "",
+    "valores_permitidos_codigos": []
+  },
+  {
+    "variavel": "MORTE",
+    "tipo": "numeric",
+    "tamanho": "1",
+    "descricao": "Indica Óbito",
+    "definicao": "#",
+    "valores_permitidos_intervalo": "",
+    "permite_nulo": "n",
+    "observacoes": "",
+    "valores_permitidos_codigos_raw": "0 : Não\n1 : Sim",
+    "valores_permitidos_codigos": [
+      {
+        "codigo": "0",
+        "valor": "Não"
+      },
+      {
+        "codigo": "1",
+        "valor": "Sim"
+      }
+    ]
+  },
+  {
+    "variavel": "UTI_MES_TO",
+    "tipo": "numeric",
+    "tamanho": "3",
+    "descricao": "Total de dias de UTI durante a internação.",
+    "definicao": "###",
+    "valores_permitidos_intervalo": "0-999",
+    "permite_nulo": "n",
+    "observacoes": "",
+    "valores_permitidos_codigos_raw": "",
+    "valores_permitidos_codigos": []
+  },
+  {
+    "variavel": "MARCA_UTI",
+    "tipo": "char",
+    "tamanho": "2",
+    "descricao": "Indica qual o tipo de UTI utilizada pelo paciente",
+    "definicao": "##",
+    "valores_permitidos_intervalo": "0 : Não utilizou UTI\n74 : UTI adulto - tipo I\n75 : UTI adulto - tipo II\n76 : UTI adulto - tipo III\n77 : UTI infantil - tipo I\n78 : UTI infantil - tipo II\n79 : UTI infantil - tipo III\n80 : UTI neonatal - tipo I\n81 : UTI neonatal - tipo II\n82 : UTI neonatal - tipo III\n83 : UTI de queimados\n85 : UTI coronariana tipo II - UCO tipo II\n86 : UTI coronariana tipo III - UCO tipo III\n99 : UTI Doador\n1 : Utilizou mais de um tipo de UTI\nem  2020, 2021 e 2022 aparece os códigos: 51 e 52",
+    "permite_nulo": "n",
+    "observacoes": "Na fonte do IPEA, essa variável está como inutilizada desde 2018, contudo algumas tuplas foram preenchidas.",
+    "valores_permitidos_codigos_raw": "",
+    "valores_permitidos_codigos": []
+  },
+  {
+    "variavel": "VAL_UTI",
+    "tipo": "numeric",
+    "tamanho": "8.2",
+    "descricao": "Valor referente aos gastos em UTI.",
+    "definicao": "########.##",
+    "valores_permitidos_intervalo": "-",
+    "permite_nulo": "n",
+    "observacoes": "Nos dados há somente uma casa decimal",
+    "valores_permitidos_codigos_raw": "",
+    "valores_permitidos_codigos": []
+  },
+  {
+    "variavel": "PROC_SOLIC",
+    "tipo": "char",
+    "tamanho": "10",
+    "descricao": "Procedimento solicitado",
+    "definicao": "##########",
+    "valores_permitidos_intervalo": "-",
+    "permite_nulo": "n",
+    "observacoes": "",
+    "valores_permitidos_codigos_raw": "",
+    "valores_permitidos_codigos": []
+  },
+  {
+    "variavel": "PROC_REA",
+    "tipo": "char",
+    "tamanho": "10",
+    "descricao": "Procedimento realizado",
+    "definicao": "##########",
+    "valores_permitidos_intervalo": "-",
+    "permite_nulo": "n",
+    "observacoes": "",
+    "valores_permitidos_codigos_raw": "",
+    "valores_permitidos_codigos": []
+  },
+  {
+    "variavel": "VAL_SH",
+    "tipo": "numeric",
+    "tamanho": "13.2",
+    "descricao": "Valor do Serviço Hospitalar",
+    "definicao": "#############.##",
+    "valores_permitidos_intervalo": "-",
+    "permite_nulo": "n",
+    "observacoes": "",
+    "valores_permitidos_codigos_raw": "",
+    "valores_permitidos_codigos": []
+  },
+  {
+    "variavel": "VAL_SP",
+    "tipo": "numeric",
+    "tamanho": "13.2",
+    "descricao": "Valor do Serviço Profissional",
+    "definicao": "#############.##",
+    "valores_permitidos_intervalo": "-",
+    "permite_nulo": "n",
+    "observacoes": "",
+    "valores_permitidos_codigos_raw": "",
+    "valores_permitidos_codigos": []
+  },
+  {
+    "variavel": "N_AIH",
+    "tipo": "char",
+    "tamanho": "13",
+    "descricao": "Número da AIH (Autorização de Internação Hospitalar)",
+    "definicao": "#############",
+    "valores_permitidos_intervalo": "-",
+    "permite_nulo": "n",
+    "observacoes": "",
+    "valores_permitidos_codigos_raw": "",
+    "valores_permitidos_codigos": []
+  },
+  {
+    "variavel": "VAL_TOT",
+    "tipo": "numeric",
+    "tamanho": "14.2",
+    "descricao": "Valor Total da AIH",
+    "definicao": "",
+    "valores_permitidos_intervalo": "-",
+    "permite_nulo": "n",
+    "observacoes": "",
+    "valores_permitidos_codigos_raw": "",
+    "valores_permitidos_codigos": []
+  },
+  {
+    "variavel": "INFEHOSP",
+    "tipo": "char",
+    "tamanho": "1",
+    "descricao": "Status de infecção hospitalar",
+    "definicao": "-",
+    "valores_permitidos_intervalo": "-",
+    "permite_nulo": "s",
+    "observacoes": "Todas tuplas sem valores; variável inutilizada a partir de 2008",
+    "valores_permitidos_codigos_raw": "",
+    "valores_permitidos_codigos": []
+  },
+  {
+    "variavel": "IND_VDRL",
+    "tipo": "char",
+    "tamanho": "1",
+    "descricao": "Indica a execução do exame VDRL (Venereal Disease Research Laboratory - Estudo Laboratorial de Doenças Venéreas)",
+    "definicao": "#",
+    "valores_permitidos_intervalo": "0 : Não executado\n1 : Executado",
+    "permite_nulo": "n",
+    "observacoes": "",
+    "valores_permitidos_codigos_raw": "",
+    "valores_permitidos_codigos": []
+  },
+  {
+    "variavel": "DIAG_PRINC",
+    "tipo": "char",
+    "tamanho": "4",
+    "descricao": "Código do diagnóstico principal (CID10).",
+    "definicao": "A###",
+    "valores_permitidos_intervalo": "CIDs",
+    "permite_nulo": "n",
+    "observacoes": "",
+    "valores_permitidos_codigos_raw": "",
+    "valores_permitidos_codigos": []
+  },
+  {
+    "variavel": "DIAG_SECUN",
+    "tipo": "char",
+    "tamanho": "4",
+    "descricao": "Código do diagnostico secundário (CID10).",
+    "definicao": "A###",
+    "valores_permitidos_intervalo": "CIDs",
+    "permite_nulo": "s",
+    "observacoes": "",
+    "valores_permitidos_codigos_raw": "",
+    "valores_permitidos_codigos": []
+  },
+  {
+    "variavel": "DIAGSEC1",
+    "tipo": "char",
+    "tamanho": "4",
+    "descricao": "Diagnóstico secundário 1",
+    "definicao": "A###",
+    "valores_permitidos_intervalo": "CIDs",
+    "permite_nulo": "s",
+    "observacoes": "",
+    "valores_permitidos_codigos_raw": "",
+    "valores_permitidos_codigos": []
+  },
+  {
+    "variavel": "DIAGSEC2",
+    "tipo": "char",
+    "tamanho": "4",
+    "descricao": "Diagnóstico secundário 2",
+    "definicao": "A###",
+    "valores_permitidos_intervalo": "CIDs",
+    "permite_nulo": "s",
+    "observacoes": "",
+    "valores_permitidos_codigos_raw": "",
+    "valores_permitidos_codigos": []
+  },
+  {
+    "variavel": "DIAGSEC3",
+    "tipo": "char",
+    "tamanho": "4",
+    "descricao": "Diagnóstico secundário 3",
+    "definicao": "A###",
+    "valores_permitidos_intervalo": "CIDs",
+    "permite_nulo": "s",
+    "observacoes": "",
+    "valores_permitidos_codigos_raw": "",
+    "valores_permitidos_codigos": []
+  },
+  {
+    "variavel": "DIAGSEC4",
+    "tipo": "char",
+    "tamanho": "4",
+    "descricao": "Diagnóstico secundário 4",
+    "definicao": "A###",
+    "valores_permitidos_intervalo": "CIDs",
+    "permite_nulo": "s",
+    "observacoes": "",
+    "valores_permitidos_codigos_raw": "",
+    "valores_permitidos_codigos": []
+  },
+  {
+    "variavel": "DIAGSEC5",
+    "tipo": "char",
+    "tamanho": "4",
+    "descricao": "Diagnóstico secundário 5",
+    "definicao": "A###",
+    "valores_permitidos_intervalo": "CIDs",
+    "permite_nulo": "s",
+    "observacoes": "",
+    "valores_permitidos_codigos_raw": "",
+    "valores_permitidos_codigos": []
+  },
+  {
+    "variavel": "DIAGSEC6",
+    "tipo": "char",
+    "tamanho": "4",
+    "descricao": "Diagnóstico secundário 6",
+    "definicao": "A###",
+    "valores_permitidos_intervalo": "CIDs",
+    "permite_nulo": "s",
+    "observacoes": "",
+    "valores_permitidos_codigos_raw": "",
+    "valores_permitidos_codigos": []
+  },
+  {
+    "variavel": "DIAGSEC7",
+    "tipo": "char",
+    "tamanho": "4",
+    "descricao": "Diagnóstico secundário 7",
+    "definicao": "A###",
+    "valores_permitidos_intervalo": "CIDs",
+    "permite_nulo": "s",
+    "observacoes": "",
+    "valores_permitidos_codigos_raw": "",
+    "valores_permitidos_codigos": []
+  },
+  {
+    "variavel": "DIAGSEC8",
+    "tipo": "char",
+    "tamanho": "4",
+    "descricao": "Diagnóstico secundário 8",
+    "definicao": "A###",
+    "valores_permitidos_intervalo": "CIDs",
+    "permite_nulo": "s",
+    "observacoes": "",
+    "valores_permitidos_codigos_raw": "",
+    "valores_permitidos_codigos": []
+  },
+  {
+    "variavel": "DIAGSEC9",
+    "tipo": "char",
+    "tamanho": "4",
+    "descricao": "Diagnóstico secundário 9",
+    "definicao": "A###",
+    "valores_permitidos_intervalo": "CIDs",
+    "permite_nulo": "s",
+    "observacoes": "",
+    "valores_permitidos_codigos_raw": "",
+    "valores_permitidos_codigos": []
+  },
+  {
+    "variavel": "CID_MORTE",
+    "tipo": "char",
+    "tamanho": "4",
+    "descricao": "CID da morte",
+    "definicao": "A###",
+    "valores_permitidos_intervalo": "CIDs",
+    "permite_nulo": "n",
+    "observacoes": "Aparentemente todos os valores estão zerados",
+    "valores_permitidos_codigos_raw": "",
+    "valores_permitidos_codigos": []
+  }
+]

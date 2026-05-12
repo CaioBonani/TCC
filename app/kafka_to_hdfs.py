@@ -19,8 +19,55 @@ from pyspark.sql.functions import (
 )
 from pyspark.sql.types import (
     StructType, StructField, StringType, IntegerType,
-    DoubleType, BooleanType
+    DoubleType, BooleanType, LongType
 )
+
+
+# ─── Linha bruta da tabela public.aih (ddl_tabela.sql) ───
+AIH_RAW_SCHEMA = StructType([
+    StructField("ano_cmpt", IntegerType(), True),
+    StructField("mes_cmpt", IntegerType(), True),
+    StructField("dt_inter", StringType(), True),
+    StructField("dt_saida", StringType(), True),
+    StructField("cep", StringType(), True),
+    StructField("munic_res", StringType(), True),
+    StructField("munic_mov", StringType(), True),
+    StructField("cgc_hosp", StringType(), True),
+    StructField("cnes", StringType(), True),
+    StructField("nasc", StringType(), True),
+    StructField("sexo", IntegerType(), True),
+    StructField("idade", IntegerType(), True),
+    StructField("cod_idade", IntegerType(), True),
+    StructField("nacional", StringType(), True),
+    StructField("instru", IntegerType(), True),
+    StructField("raca_cor", IntegerType(), True),
+    StructField("etnia", StringType(), True),
+    StructField("cbor", StringType(), True),
+    StructField("morte", IntegerType(), True),
+    StructField("uti_mes_to", IntegerType(), True),
+    StructField("marca_uti", IntegerType(), True),
+    StructField("val_uti", DoubleType(), True),
+    StructField("proc_solic", StringType(), True),
+    StructField("proc_rea", StringType(), True),
+    StructField("val_sh", DoubleType(), True),
+    StructField("val_sp", DoubleType(), True),
+    StructField("n_aih", StringType(), True),
+    StructField("val_tot", DoubleType(), True),
+    StructField("infehosp", IntegerType(), True),
+    StructField("ind_vdrl", IntegerType(), True),
+    StructField("diag_princ", StringType(), True),
+    StructField("diag_secun", StringType(), True),
+    StructField("diagsec1", StringType(), True),
+    StructField("diagsec2", StringType(), True),
+    StructField("diagsec3", StringType(), True),
+    StructField("diagsec4", StringType(), True),
+    StructField("diagsec5", StringType(), True),
+    StructField("diagsec6", StringType(), True),
+    StructField("diagsec7", StringType(), True),
+    StructField("diagsec8", StringType(), True),
+    StructField("diagsec9", StringType(), True),
+    StructField("cid_morte", StringType(), True),
+])
 
 
 # ─── Schema dos dados DATASUS ───
@@ -43,6 +90,10 @@ DATASUS_SCHEMA = StructType([
     StructField("obito", BooleanType(), True),
     StructField("uti", BooleanType(), True),
     StructField("procedimento_principal", StringType(), True),
+    StructField("source_table", StringType(), True),
+    StructField("replay_sequence", LongType(), True),
+    StructField("replay_cycle", IntegerType(), True),
+    StructField("raw_aih", AIH_RAW_SCHEMA, True),
 ])
 
 HDFS_OUTPUT_PATH = "hdfs://namenode:9000/datasus/internacoes/"
